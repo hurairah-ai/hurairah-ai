@@ -4,9 +4,119 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Hurairah AI</title>
+
+<style>
+body{
+margin:0;
+background:#0f172a;
+font-family:Arial,sans-serif;
+height:100vh;
+display:flex;
+flex-direction:column;
+}
+
+.header{
+background:#111827;
+color:white;
+padding:18px;
+text-align:center;
+font-size:24px;
+font-weight:bold;
+}
+
+#chat{
+flex:1;
+overflow:auto;
+padding:15px;
+color:white;
+}
+
+.msg{
+padding:12px;
+margin:8px 0;
+border-radius:12px;
+max-width:80%;
+}
+
+.user{
+background:#2563eb;
+margin-left:auto;
+}
+
+.bot{
+background:#1f2937;
+}
+
+.bottom{
+display:flex;
+padding:10px;
+background:#111827;
+}
+
+input{
+flex:1;
+padding:12px;
+border:none;
+border-radius:10px;
+}
+
+button{
+margin-left:10px;
+padding:12px 20px;
+border:none;
+border-radius:10px;
+background:#2563eb;
+color:white;
+}
+</style>
 </head>
+
 <body>
-<h1>Hurairah AI</h1>
-<p>AI Website Loading...</p>
+
+<div class="header">🤖 Hurairah AI</div>
+
+<div id="chat">
+<div class="msg bot">Assalamualaikum! Main Hurairah AI hoon.</div>
+</div>
+
+<div class="bottom">
+<input id="msg" placeholder="Type message...">
+<button onclick="sendMessage()">Send</button>
+</div>
+
+<script>
+const API_URL="https://hurairah-ai.annu8857818.workers.dev";
+
+async function sendMessage(){
+
+const input=document.getElementById("msg");
+const text=input.value.trim();
+
+if(!text) return;
+
+const chat=document.getElementById("chat");
+
+chat.innerHTML+=`<div class="msg user">${text}</div>`;
+
+input.value="";
+
+const res=await fetch(API_URL,{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({
+message:text
+})
+});
+
+const data=await res.json();
+
+chat.innerHTML+=`<div class="msg bot">${data.reply}</div>`;
+
+chat.scrollTop=chat.scrollHeight;
+}
+</script>
+
 </body>
 </html>
