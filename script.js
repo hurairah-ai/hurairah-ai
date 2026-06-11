@@ -116,15 +116,44 @@ if (SpeechRecognition && micBtn) {
   recognition.lang = "en-IN";
   recognition.continuous = false;
   recognition.interimResults = false;
+recognition.onresult = async (event) => {
 
-  recognition.onresult = (event) => {
+  let text =
+    event.results[0][0].transcript;
 
-    const text =
-      event.results[0][0].transcript;
+  if(/[ऀ-ॿ]/.test(text)){
+
+    try{
+
+      const res = await fetch(API_URL,{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+          message:
+          "Convert this Hindi text into Hinglish only. Do not explain anything. Text: " + text
+        })
+      });
+
+      const data = await res.json();
+
+      input.value =
+        data.reply || text;
+
+    }catch{
+
+      input.value = text;
+
+    }
+
+  }else{
 
     input.value = text;
 
-  };
+  }
+
+};
 
   micBtn.addEventListener("click", () => {
 
