@@ -57,8 +57,6 @@ function addMessage(text, type) {
   chatBox.scrollTop =
   chatBox.scrollHeight;
 }
-}
-
 function showThinking() {
   const thinking = document.createElement("div");
 
