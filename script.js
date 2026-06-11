@@ -1,5 +1,7 @@
 const API_URL = "https://hurairah-ai.annu8857818.workers.dev";
-
+let messages = JSON.parse(
+  localStorage.getItem("hurairah_chat") || "[]"
+);
 const chatBox = document.getElementById("chatBox");
 const input = document.getElementById("messageInput");
 const sendBtn = document.getElementById("sendBtn");
@@ -58,6 +60,15 @@ function addMessage(text, type) {
 
   chatBox.scrollTop =
   chatBox.scrollHeight;
+  messages.push({
+  text: text,
+  type: type
+});
+
+localStorage.setItem(
+  "hurairah_chat",
+  JSON.stringify(messages)
+);
 }
 function showThinking() {
   const thinking = document.createElement("div");
@@ -236,5 +247,17 @@ imageInput.addEventListener("change", () => {
   };
 
   reader.readAsDataURL(file);
+
+});
+window.addEventListener("load", () => {
+
+  messages.forEach(msg => {
+
+    addMessage(
+      msg.text,
+      msg.type
+    );
+
+  });
 
 });
