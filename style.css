@@ -274,3 +274,12 @@ background:rgba(255,255,255,.2);
   box-shadow:0 0 20px rgba(139,92,246,.5);
   font-size:18px;
 }
+@keyframes pulse{
+0%{transform:translateX(-50%) scale(1);}
+50%{transform:translateX(-50%) scale(1.08);}
+100%{transform:translateX(-50%) scale(1);}
+}
+
+.recording-popup{
+animation:pulse 1s infinite;
+}
