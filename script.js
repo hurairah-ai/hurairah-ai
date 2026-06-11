@@ -2,6 +2,8 @@ const API_URL = "https://hurairah-ai.annu8857818.workers.dev";
 let messages = JSON.parse(
   localStorage.getItem("hurairah_chat") || "[]"
 );
+let hurairahMode =
+localStorage.getItem("hurairah_mode") === "true";
 const chatBox = document.getElementById("chatBox");
 const input = document.getElementById("messageInput");
 const sendBtn = document.getElementById("sendBtn");
@@ -96,6 +98,16 @@ function removeThinking() {
 async function sendMessage() {
 
   const text = input.value.trim();
+  if (text.toLowerCase() === "mehajabeen pgl hu") {
+
+  hurairahMode = true;
+
+  localStorage.setItem(
+    "hurairah_mode",
+    "true"
+  );
+
+  }
 
   if (!text) return;
 
@@ -114,9 +126,10 @@ async function sendMessage() {
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({
+    body: JSON.stringify({
   message: text,
-  image: selectedImage
+  image: selectedImage,
+  hurairahMode: hurairahMode
 })
     });
 
