@@ -4,7 +4,8 @@ const chatBox = document.getElementById("chatBox");
 const input = document.getElementById("messageInput");
 const sendBtn = document.getElementById("sendBtn");
 const micBtn = document.getElementById("micBtn");
-
+const attachBtn = document.getElementById("attachBtn");
+const imageInput = document.getElementById("imageInput");
 function removeWelcomeScreen() {
   const welcome = document.querySelector(".welcome-screen");
   if (welcome) {
