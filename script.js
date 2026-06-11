@@ -168,6 +168,7 @@ if (SpeechRecognition && micBtn) {
   recognition.continuous = false;
   recognition.interimResults = true;
   recognition.onstart = () => {
+alert("Mic Start Ho Gaya");
 if(recordingPopup){
 recordingPopup.style.display = "block";
 }
