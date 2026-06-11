@@ -261,3 +261,14 @@ window.addEventListener("load", () => {
   });
 
 });
+const clearBtn = document.getElementById("clearBtn");
+
+clearBtn.addEventListener("click", () => {
+
+  localStorage.removeItem("hurairah_chat");
+
+  chatBox.innerHTML = "";
+
+  location.reload();
+
+});
