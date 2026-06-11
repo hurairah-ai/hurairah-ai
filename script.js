@@ -11,15 +11,52 @@ function removeWelcomeScreen() {
     welcome.remove();
   }
 }
-
 function addMessage(text, type) {
+
   const msg = document.createElement("div");
 
   msg.className = `message ${type}`;
-  msg.textContent = text;
+
+  if(type === "bot"){
+
+    msg.innerHTML = `
+      <div>${text}</div>
+      <button class="speak-btn">🔊</button>
+    `;
+
+  }else{
+
+    msg.textContent = text;
+
+  }
 
   chatBox.appendChild(msg);
-  chatBox.scrollTop = chatBox.scrollHeight;
+
+  if(type === "bot"){
+
+    const speakBtn =
+    msg.querySelector(".speak-btn");
+
+    speakBtn.addEventListener(
+      "click",
+      () => {
+
+        const speech =
+        new SpeechSynthesisUtterance(text);
+
+        speech.lang = "en-IN";
+        speech.rate = 1;
+
+        speechSynthesis.speak(speech);
+
+      }
+    );
+
+  }
+
+  chatBox.scrollTop =
+  chatBox.scrollHeight;
+}
 }
 
 function showThinking() {
