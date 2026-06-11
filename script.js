@@ -1,4 +1,4 @@
-const API_URL = "https://hurairah-ai.annu8857818.workers.dev";
+huconst API_URL = "https://hurairah-ai.annu8857818.workers.dev";
 
 const chatBox = document.getElementById("chatBox");
 const input = document.getElementById("messageInput");
@@ -81,3 +81,54 @@ input.addEventListener("keydown", (e) => {
     sendMessage();
   }
 });
+// ===== Voice Input =====
+
+const micBtn = document.querySelector(".icon-btn:last-of-type");
+
+const SpeechRecognition =
+window.SpeechRecognition ||
+window.webkitSpeechRecognition;
+
+if (SpeechRecognition) {
+
+  const recognition = new SpeechRecognition();
+
+  recognition.lang = "en-IN";
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  micBtn.addEventListener("click", () => {
+
+    micBtn.innerHTML = "🎙️";
+    recognition.start();
+
+  });
+
+  recognition.onresult = (event) => {
+
+    const text =
+      event.results[0][0].transcript;
+
+    input.value = text;
+
+    micBtn.innerHTML = "🎤";
+
+  };
+
+  recognition.onerror = () => {
+
+    micBtn.innerHTML = "🎤";
+
+  };
+
+  recognition.onend = () => {
+
+    micBtn.innerHTML = "🎤";
+
+  };
+
+} else {
+
+  console.log("Speech Recognition not supported");
+
+}
