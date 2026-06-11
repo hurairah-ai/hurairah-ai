@@ -102,8 +102,9 @@ async function sendMessage() {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        message: text
-      })
+  message: text,
+  image: selectedImage
+})
     });
 
     const data = await res.json();
@@ -114,7 +115,7 @@ async function sendMessage() {
       data.reply || "Koi response nahi mila",
       "bot"
     );
-
+selectedImage = null;
   } catch (err) {
 
     removeThinking();
