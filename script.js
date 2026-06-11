@@ -5,45 +5,24 @@ const input = document.getElementById("messageInput");
 const sendBtn = document.getElementById("sendBtn");
 const micBtn = document.getElementById("micBtn");
 
-function addMessage(text, type) {
-  const msg = document.createElement("div");
-  msg.className = `message ${type}`;
-  msg.textContent = text;
-
-  chatBox.appendChild(msg);
-  chatBox.scrollTop = chatBox.scrollHeight;
-}
-
-function showThinking() {
-  const thinking = document.createElement("div");
-
-const API_URL = "https://hurairah-ai.annu8857818.workers.dev";
-
-const chatBox = document.getElementById("chatBox");
-const input = document.getElementById("messageInput");
-const sendBtn = document.getElementById("sendBtn");
-const micBtn = document.getElementById("micBtn");
-
-function hideWelcome() {
+function removeWelcomeScreen() {
   const welcome = document.querySelector(".welcome-screen");
-  if (welcome) welcome.style.display = "none";
+  if (welcome) {
+    welcome.remove();
+  }
 }
 
 function addMessage(text, type) {
-
-  hideWelcome();
-
   const msg = document.createElement("div");
+
   msg.className = `message ${type}`;
   msg.textContent = text;
 
   chatBox.appendChild(msg);
-
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
 function showThinking() {
-
   const thinking = document.createElement("div");
 
   thinking.className = "thinking";
@@ -56,14 +35,11 @@ function showThinking() {
   `;
 
   chatBox.appendChild(thinking);
-
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
 function removeThinking() {
-
   const t = document.getElementById("thinking");
-
   if (t) t.remove();
 }
 
@@ -72,6 +48,8 @@ async function sendMessage() {
   const text = input.value.trim();
 
   if (!text) return;
+
+  removeWelcomeScreen();
 
   addMessage(text, "user");
 
@@ -96,7 +74,7 @@ async function sendMessage() {
     removeThinking();
 
     addMessage(
-      data.reply || "No response",
+      data.reply || "Koi response nahi mila",
       "bot"
     );
 
@@ -108,31 +86,24 @@ async function sendMessage() {
       "Error: " + err.message,
       "bot"
     );
+
   }
 }
 
-sendBtn.addEventListener(
-  "click",
-  sendMessage
-);
+sendBtn.addEventListener("click", sendMessage);
 
-input.addEventListener(
-  "keydown",
-  (e) => {
+input.addEventListener("keydown", (e) => {
 
-    if (
-      e.key === "Enter" &&
-      !e.shiftKey
-    ) {
+  if (e.key === "Enter" && !e.shiftKey) {
 
-      e.preventDefault();
+    e.preventDefault();
+    sendMessage();
 
-      sendMessage();
-    }
   }
-);
 
-// ===== MIC =====
+});
+
+// ===== Voice Input =====
 
 const SpeechRecognition =
 window.SpeechRecognition ||
@@ -140,10 +111,11 @@ window.webkitSpeechRecognition;
 
 if (SpeechRecognition && micBtn) {
 
-  const recognition =
-  new SpeechRecognition();
+  const recognition = new SpeechRecognition();
 
   recognition.lang = "hi-IN";
+  recognition.continuous = false;
+  recognition.interimResults = false;
 
   recognition.onresult = (event) => {
 
@@ -151,21 +123,25 @@ if (SpeechRecognition && micBtn) {
     event.results[0][0].transcript;
 
     input.value = text;
+
   };
 
-  micBtn.addEventListener(
-    "click",
-    () => {
+  micBtn.addEventListener("click", () => {
 
+    try {
       recognition.start();
+    } catch(err) {
+      console.log(err);
     }
-  );
+
+  });
 
 } else {
 
-  console.log(
-    "Speech Recognition Not Supported"
-  );
+  console.log("Speech Recognition Not Supported");
 
-  micBtn.style.display = "none";
-}
+  if (micBtn) {
+    micBtn.style.display = "none";
+  }
+
+              }
