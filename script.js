@@ -6,6 +6,7 @@ const sendBtn = document.getElementById("sendBtn");
 const micBtn = document.getElementById("micBtn");
 const attachBtn = document.getElementById("attachBtn");
 const imageInput = document.getElementById("imageInput");
+let selectedImage = null;
 function removeWelcomeScreen() {
   const welcome = document.querySelector(".welcome-screen");
   if (welcome) {
@@ -220,9 +221,19 @@ imageInput.addEventListener("change", () => {
 
   if (!file) return;
 
-  addMessage(
-    "📷 Image Selected: " + file.name,
-    "user"
-  );
+  const reader = new FileReader();
+
+  reader.onload = () => {
+
+    selectedImage = reader.result;
+
+    addMessage(
+      "📷 Image Selected: " + file.name,
+      "user"
+    );
+
+  };
+
+  reader.readAsDataURL(file);
 
 });
