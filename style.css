@@ -260,3 +260,17 @@ background:rgba(255,255,255,.2);
   color: white;
   z-index: 9999;
 }
+.recording-popup{
+  position:fixed;
+  left:50%;
+  bottom:120px;
+  transform:translateX(-50%);
+  background:#1f1f1f;
+  color:white;
+  padding:15px 25px;
+  border-radius:20px;
+  display:none;
+  z-index:9999;
+  box-shadow:0 0 20px rgba(139,92,246,.5);
+  font-size:18px;
+}
