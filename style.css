@@ -254,4 +254,6 @@ background:rgba(255,255,255,.2);
   border: none;
   font-size: 22px;
   cursor: pointer;
+  color: white;
+  z-index: 9999;
 }
