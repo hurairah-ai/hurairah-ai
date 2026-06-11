@@ -1,19 +1,22 @@
-huconst API_URL = "https://hurairah-ai.annu8857818.workers.dev";
+const API_URL = "https://hurairah-ai.annu8857818.workers.dev";
 
 const chatBox = document.getElementById("chatBox");
 const input = document.getElementById("messageInput");
 const sendBtn = document.getElementById("sendBtn");
+const micBtn = document.getElementById("micBtn");
 
 function addMessage(text, type) {
   const msg = document.createElement("div");
   msg.className = `message ${type}`;
   msg.textContent = text;
+
   chatBox.appendChild(msg);
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
 function showThinking() {
   const thinking = document.createElement("div");
+
   thinking.className = "thinking";
   thinking.id = "thinking";
 
@@ -29,20 +32,24 @@ function showThinking() {
 
 function removeThinking() {
   const t = document.getElementById("thinking");
+
   if (t) t.remove();
 }
 
 async function sendMessage() {
+
   const text = input.value.trim();
 
   if (!text) return;
 
   addMessage(text, "user");
+
   input.value = "";
 
   showThinking();
 
   try {
+
     const res = await fetch(API_URL, {
       method: "POST",
       headers: {
@@ -70,41 +77,64 @@ async function sendMessage() {
       "Error: " + err.message,
       "bot"
     );
+
   }
+
 }
 
-sendBtn.addEventListener("click", sendMessage);
+sendBtn.addEventListener(
+  "click",
+  sendMessage
+);
 
-input.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
+input.addEventListener(
+  "keydown",
+  (e) => {
+
+    if (
+      e.key === "Enter" &&
+      !e.shiftKey
+    ) {
+
+      e.preventDefault();
+      sendMessage();
+
+    }
+
   }
-});
+);
+
 // ===== Voice Input =====
 
-const micBtn = document.querySelector(".icon-btn:last-of-type");
-
 const SpeechRecognition =
-window.SpeechRecognition ||
-window.webkitSpeechRecognition;
+  window.SpeechRecognition ||
+  window.webkitSpeechRecognition;
 
-if (SpeechRecognition) {
+if (SpeechRecognition && micBtn) {
 
-  const recognition = new SpeechRecognition();
+  const recognition =
+    new SpeechRecognition();
 
   recognition.lang = "en-IN";
   recognition.continuous = false;
   recognition.interimResults = false;
 
-  micBtn.addEventListener("click", () => {
+  micBtn.addEventListener(
+    "click",
+    () => {
 
-    micBtn.innerHTML = "🎙️";
-    recognition.start();
+      alert("Mic Clicked");
 
-  });
+      micBtn.innerHTML = "🎙️";
 
-  recognition.onresult = (event) => {
+      recognition.start();
+
+    }
+  );
+
+  recognition.onresult = (
+    event
+  ) => {
 
     const text =
       event.results[0][0].transcript;
@@ -115,7 +145,14 @@ if (SpeechRecognition) {
 
   };
 
-  recognition.onerror = () => {
+  recognition.onerror = (
+    event
+  ) => {
+
+    console.log(
+      "Voice Error:",
+      event.error
+    );
 
     micBtn.innerHTML = "🎤";
 
@@ -129,6 +166,8 @@ if (SpeechRecognition) {
 
 } else {
 
-  console.log("Speech Recognition not supported");
+  console.log(
+    "Speech Recognition not supported"
+  );
 
-}
+      }
