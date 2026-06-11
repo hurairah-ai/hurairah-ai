@@ -123,7 +123,15 @@ if (SpeechRecognition && micBtn) {
     "click",
     () => {
 
-      alert("Mic Clicked");
+      alert("Mic button pressed");
+
+recognition.onstart = () => {
+  alert("Mic Started");
+};
+
+recognition.onerror = (event) => {
+  alert("Mic Error: " + event.error);
+};
 
       micBtn.innerHTML = "🎙️";
 
