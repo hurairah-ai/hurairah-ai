@@ -112,37 +112,26 @@ const SpeechRecognition =
 
 if (SpeechRecognition && micBtn) {
 
-  const recognition =
-    new SpeechRecognition();
+  const recognition = new SpeechRecognition();
 
-  recognition.lang = "en-IN";
+  recognition.lang = "hi-IN";
   recognition.continuous = false;
   recognition.interimResults = false;
 
-  micBtn.addEventListener(
-    "click",
-    () => {
+  recognition.onstart = () => {
+    alert("Mic Started");
+  };
 
-      alert("Mic button pressed");
+  recognition.onerror = (event) => {
+    alert("Mic Error: " + event.error);
+    micBtn.innerHTML = "🎤";
+  };
 
-recognition.onstart = () => {
-  alert("Mic Started");
-};
+  recognition.onend = () => {
+    micBtn.innerHTML = "🎤";
+  };
 
-recognition.onerror = (event) => {
-  alert("Mic Error: " + event.error);
-};
-
-      micBtn.innerHTML = "🎙️";
-
-      recognition.start();
-
-    }
-  );
-
-  recognition.onresult = (
-    event
-  ) => {
+  recognition.onresult = (event) => {
 
     const text =
       event.results[0][0].transcript;
@@ -150,32 +139,22 @@ recognition.onerror = (event) => {
     input.value = text;
 
     micBtn.innerHTML = "🎤";
-
   };
 
-  recognition.onerror = (
-    event
-  ) => {
+  micBtn.addEventListener("click", () => {
 
-    console.log(
-      "Voice Error:",
-      event.error
-    );
+    micBtn.innerHTML = "🎙️";
 
-    micBtn.innerHTML = "🎤";
+    try {
+      recognition.start();
+    } catch(err) {
+      alert("Error: " + err.message);
+    }
 
-  };
-
-  recognition.onend = () => {
-
-    micBtn.innerHTML = "🎤";
-
-  };
+  });
 
 } else {
 
-  console.log(
-    "Speech Recognition not supported"
-  );
+  alert("Speech Recognition Not Supported");
 
-      }
+}
