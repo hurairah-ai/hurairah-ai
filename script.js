@@ -265,9 +265,13 @@ const clearBtn = document.getElementById("clearBtn");
 
 clearBtn.addEventListener("click", () => {
 
-  localStorage.removeItem("hurairah_chat");
+  localStorage.clear();
+
+  messages = [];
 
   chatBox.innerHTML = "";
+
+  alert("Chat Deleted");
 
   location.reload();
 
