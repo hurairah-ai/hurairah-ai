@@ -249,18 +249,6 @@ imageInput.addEventListener("change", () => {
   reader.readAsDataURL(file);
 
 });
-window.addEventListener("load", () => {
-
-  messages.forEach(msg => {
-
-    addMessage(
-      msg.text,
-      msg.type
-    );
-
-  });
-
-});
 const clearBtn = document.getElementById("clearBtn");
 
 clearBtn.addEventListener("click", () => {
