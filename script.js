@@ -113,14 +113,14 @@ if (SpeechRecognition && micBtn) {
 
   const recognition = new SpeechRecognition();
 
-  recognition.lang = "hi-IN";
+  recognition.lang = "en-IN";
   recognition.continuous = false;
   recognition.interimResults = false;
 
   recognition.onresult = (event) => {
 
     const text =
-    event.results[0][0].transcript;
+      event.results[0][0].transcript;
 
     input.value = text;
 
@@ -144,4 +144,4 @@ if (SpeechRecognition && micBtn) {
     micBtn.style.display = "none";
   }
 
-              }
+}
