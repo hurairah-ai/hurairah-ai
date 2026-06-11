@@ -226,3 +226,17 @@ font-size:22px;
 }
 
 }
+.speak-btn{
+margin-top:10px;
+padding:8px 12px;
+border:none;
+border-radius:12px;
+cursor:pointer;
+background:rgba(255,255,255,.12);
+color:white;
+font-size:14px;
+}
+
+.speak-btn:hover{
+background:rgba(255,255,255,.2);
+}
