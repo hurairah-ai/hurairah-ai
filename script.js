@@ -210,3 +210,19 @@ recognition.onresult = async (event) => {
   }
 
 }
+attachBtn.addEventListener("click", () => {
+  imageInput.click();
+});
+
+imageInput.addEventListener("change", () => {
+
+  const file = imageInput.files[0];
+
+  if (!file) return;
+
+  addMessage(
+    "📷 Image Selected: " + file.name,
+    "user"
+  );
+
+});
