@@ -168,11 +168,15 @@ if (SpeechRecognition && micBtn) {
   recognition.continuous = false;
   recognition.interimResults = true;
   recognition.onstart = () => {
-  recordingPopup.style.display = "block";
+if(recordingPopup){
+recordingPopup.style.display = "block";
+}
 };
 
 recognition.onend = () => {
-  recordingPopup.style.display = "none";
+if(recordingPopup){
+recordingPopup.style.display = "none";
+}
 };
 recognition.onresult = (event) => {
 
