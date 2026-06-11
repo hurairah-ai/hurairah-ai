@@ -240,3 +240,18 @@ font-size:14px;
 .speak-btn:hover{
 background:rgba(255,255,255,.2);
 }
+.topbar{
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#clearBtn{
+  position: absolute;
+  left: 10px;
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+}
