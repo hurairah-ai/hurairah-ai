@@ -9,6 +9,8 @@ const micBtn = document.getElementById("micBtn");
 const attachBtn = document.getElementById("attachBtn");
 const imageInput = document.getElementById("imageInput");
 let selectedImage = null;
+const recordingPopup =
+document.getElementById("recordingPopup");
 function removeWelcomeScreen() {
   const welcome = document.querySelector(".welcome-screen");
   if (welcome) {
@@ -165,6 +167,13 @@ if (SpeechRecognition && micBtn) {
   recognition.lang = "en-IN";
   recognition.continuous = false;
   recognition.interimResults = true;
+  recognition.onstart = () => {
+  recordingPopup.style.display = "block";
+};
+
+recognition.onend = () => {
+  recordingPopup.style.display = "none";
+};
 recognition.onresult = (event) => {
 
   let transcript = "";
