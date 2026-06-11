@@ -17,6 +17,35 @@ function addMessage(text, type) {
 function showThinking() {
   const thinking = document.createElement("div");
 
+const API_URL = "https://hurairah-ai.annu8857818.workers.dev";
+
+const chatBox = document.getElementById("chatBox");
+const input = document.getElementById("messageInput");
+const sendBtn = document.getElementById("sendBtn");
+const micBtn = document.getElementById("micBtn");
+
+function hideWelcome() {
+  const welcome = document.querySelector(".welcome-screen");
+  if (welcome) welcome.style.display = "none";
+}
+
+function addMessage(text, type) {
+
+  hideWelcome();
+
+  const msg = document.createElement("div");
+  msg.className = `message ${type}`;
+  msg.textContent = text;
+
+  chatBox.appendChild(msg);
+
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function showThinking() {
+
+  const thinking = document.createElement("div");
+
   thinking.className = "thinking";
   thinking.id = "thinking";
 
@@ -27,10 +56,12 @@ function showThinking() {
   `;
 
   chatBox.appendChild(thinking);
+
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
 function removeThinking() {
+
   const t = document.getElementById("thinking");
 
   if (t) t.remove();
@@ -65,7 +96,7 @@ async function sendMessage() {
     removeThinking();
 
     addMessage(
-      data.reply || "Koi response nahi mila",
+      data.reply || "No response",
       "bot"
     );
 
@@ -77,9 +108,7 @@ async function sendMessage() {
       "Error: " + err.message,
       "bot"
     );
-
   }
-
 }
 
 sendBtn.addEventListener(
@@ -97,64 +126,46 @@ input.addEventListener(
     ) {
 
       e.preventDefault();
+
       sendMessage();
-
     }
-
   }
 );
 
-// ===== Voice Input =====
+// ===== MIC =====
 
 const SpeechRecognition =
-  window.SpeechRecognition ||
-  window.webkitSpeechRecognition;
+window.SpeechRecognition ||
+window.webkitSpeechRecognition;
 
 if (SpeechRecognition && micBtn) {
 
-  const recognition = new SpeechRecognition();
+  const recognition =
+  new SpeechRecognition();
 
   recognition.lang = "hi-IN";
-  recognition.continuous = false;
-  recognition.interimResults = false;
-
-  recognition.onstart = () => {
-    alert("Mic Started");
-  };
-
-  recognition.onerror = (event) => {
-    alert("Mic Error: " + event.error);
-    micBtn.innerHTML = "🎤";
-  };
-
-  recognition.onend = () => {
-    micBtn.innerHTML = "🎤";
-  };
 
   recognition.onresult = (event) => {
 
     const text =
-      event.results[0][0].transcript;
+    event.results[0][0].transcript;
 
     input.value = text;
-
-    micBtn.innerHTML = "🎤";
   };
 
-  micBtn.addEventListener("click", () => {
+  micBtn.addEventListener(
+    "click",
+    () => {
 
-    micBtn.innerHTML = "🎙️";
-
-    try {
       recognition.start();
-    } catch(err) {
-      alert("Error: " + err.message);
     }
-
-  });
+  );
 
 } else {
 
-  alert("Speech Recognition Not Supported");
+  console.log(
+    "Speech Recognition Not Supported"
+  );
 
+  micBtn.style.display = "none";
 }
