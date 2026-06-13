@@ -5,91 +5,435 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Hurairah AI Admin</title>
   <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
     body {
       background: #0f172a;
       color: white;
-      font-family: Arial;
-      padding: 20px;
+      font-family: Arial, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
-    h1 { text-align: center; }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-    }
-    th, td {
-      border: 1px solid #333;
-      padding: 10px;
-      text-align: left;
-    }
-    th { background: #7c3aed; }
-    tr:nth-child(even) { background: #111827; }
-    #error {
-      color: red;
+
+    /* HEADER */
+    .header {
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      padding: 16px 20px;
+      font-size: 20px;
+      font-weight: 700;
       text-align: center;
-      margin-top: 20px;
+      letter-spacing: 1px;
+    }
+
+    /* MAIN LAYOUT */
+    .main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* LEFT - USER LIST */
+    .user-list {
+      width: 280px;
+      min-width: 280px;
+      background: #1e1b4b;
+      border-right: 1px solid rgba(124,58,237,0.3);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .user-list-header {
+      padding: 14px 16px;
+      font-size: 13px;
+      color: #a78bfa;
+      border-bottom: 1px solid rgba(124,58,237,0.2);
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .user-card {
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      cursor: pointer;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .user-card:hover { background: rgba(124,58,237,0.15); }
+    .user-card.active { background: rgba(124,58,237,0.3); }
+
+    .user-avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
       font-size: 18px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .user-info { flex: 1; overflow: hidden; }
+
+    .user-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: white;
+      margin-bottom: 3px;
+    }
+
+    .user-last-msg {
+      font-size: 12px;
+      color: #94a3b8;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .user-meta {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .user-count {
+      background: #7c3aed;
+      color: white;
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+
+    .delete-btn {
+      background: rgba(239,68,68,0.2);
+      border: 1px solid rgba(239,68,68,0.4);
+      color: #ef4444;
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .delete-btn:hover { background: rgba(239,68,68,0.4); }
+
+    /* RIGHT - CHAT VIEW */
+    .chat-view {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .chat-header {
+      padding: 14px 20px;
+      background: #1e1b4b;
+      border-bottom: 1px solid rgba(124,58,237,0.2);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .chat-header-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .chat-header-name {
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .chat-header-msgs {
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .chat-messages::-webkit-scrollbar { width: 3px; }
+    .chat-messages::-webkit-scrollbar-thumb { background: rgba(124,58,237,0.4); border-radius: 10px; }
+
+    .msg-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .msg-time {
+      font-size: 11px;
+      color: #64748b;
+      text-align: center;
+    }
+
+    .msg-user-bubble {
+      align-self: flex-end;
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      padding: 10px 14px;
+      border-radius: 16px;
+      border-bottom-right-radius: 4px;
+      max-width: 70%;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .msg-bot-bubble {
+      align-self: flex-start;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.08);
+      padding: 10px 14px;
+      border-radius: 16px;
+      border-bottom-left-radius: 4px;
+      max-width: 70%;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #e2e8f0;
+    }
+
+    .msg-label {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-bottom: 2px;
+    }
+
+    .msg-label.right { text-align: right; }
+
+    /* EMPTY STATE */
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #475569;
+      gap: 12px;
+    }
+
+    .empty-state span { font-size: 48px; }
+    .empty-state p { font-size: 16px; }
+
+    /* ACCESS DENIED */
+    .denied {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      color: #ef4444;
+    }
+
+    /* MOBILE */
+    @media(max-width: 600px) {
+      .user-list { width: 100%; min-width: unset; }
+      .chat-view { display: none; }
+      .chat-view.mobile-show {
+        display: flex;
+        position: fixed;
+        inset: 0;
+        z-index: 999;
+        background: #0f172a;
+      }
+      .back-btn {
+        display: flex !important;
+        align-items: center;
+        gap: 6px;
+        background: none;
+        border: none;
+        color: #a78bfa;
+        font-size: 14px;
+        cursor: pointer;
+        margin-right: 8px;
+      }
+    }
+
+    .back-btn { display: none; }
+
+    /* LOADING */
+    .loading {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #a78bfa;
+      font-size: 16px;
     }
   </style>
 </head>
-
 <body>
-  <div id="adminPanel"></div>
 
-  <script>
-    const pass = prompt("Admin Password:");
+<div class="header">✨ Hurairah AI — Admin Panel</div>
 
-    if (pass !== "Hurairah786") {
-      document.getElementById("adminPanel").innerHTML = `
-        <h1 style="color:red;text-align:center;margin-top:100px;font-size:50px;">
-          ❌ Access Denied
-        </h1>
-      `;
-    } else {
-      document.getElementById("adminPanel").innerHTML = `
-        <h1>Hurairah AI Admin Panel</h1>
-        <table id="chatTable">
-          <tr>
-            <th>User</th>
-            <th>Message</th>
-            <th>AI Reply</th>
-            <th>Time</th>
-          </tr>
-        </table>
-        <p id="error"></p>
-      `;
+<div class="main" id="main">
+  <div class="loading">Loading...</div>
+</div>
 
-      fetch("https://hurairah-ai.annu8857818.workers.dev/admin", {
-        headers: {
-          "x-admin-password": pass
-        }
-      })
-      .then(r => {
-        if (!r.ok) {
-          document.getElementById("adminPanel").innerHTML =
-            "<h1 style='color:red;text-align:center;margin-top:100px'>❌ Access Denied</h1>";
-          throw new Error("Access Denied");
-        }
-        return r.json();
-      })
-      .then(data => {
-        const table = document.getElementById("chatTable");
-        data.forEach(chat => {
-          table.innerHTML += `
-            <tr>
-              <td>${chat.username}</td>
-              <td>${chat.user_message}</td>
-              <td>${chat.ai_reply}</td>
-              <td>${chat.created_at}</td>
-            </tr>
+<script>
+  const API = "https://hurairah-ai.annu8857818.workers.dev";
+  const pass = prompt("Admin Password:");
+
+  if (pass !== "Hurairah786") {
+    document.getElementById("main").innerHTML = `<div class="denied">❌ Access Denied</div>`;
+  } else {
+    loadData();
+  }
+
+  let allChats = [];
+  let activeUser = null;
+
+  function loadData() {
+    document.getElementById("main").innerHTML = `<div class="loading">⏳ Loading chats...</div>`;
+
+    fetch(API + "/admin", {
+      headers: { "x-admin-password": pass }
+    })
+    .then(r => r.json())
+    .then(data => {
+      allChats = data;
+      renderPanel();
+    })
+    .catch(err => {
+      document.getElementById("main").innerHTML = `<div class="denied">❌ Error: ${err.message}</div>`;
+    });
+  }
+
+  function renderPanel() {
+    // Group by username
+    const grouped = {};
+    allChats.forEach(chat => {
+      if (!grouped[chat.username]) grouped[chat.username] = [];
+      grouped[chat.username].push(chat);
+    });
+
+    const users = Object.keys(grouped);
+
+    document.getElementById("main").innerHTML = `
+      <div class="user-list" id="userList">
+        <div class="user-list-header">👥 Users (${users.length})</div>
+        ${users.map(username => {
+          const chats = grouped[username];
+          const last = chats[chats.length - 1];
+          const initial = username.charAt(0).toUpperCase();
+          return `
+            <div class="user-card" id="card-${username}" onclick="showChat('${username}')">
+              <div class="user-avatar">${initial}</div>
+              <div class="user-info">
+                <div class="user-name">${username}</div>
+                <div class="user-last-msg">${last.user_message}</div>
+              </div>
+              <div class="user-meta">
+                <span class="user-count">${chats.length}</span>
+                <button class="delete-btn" onclick="deleteUser(event, '${username}')">🗑️ Delete</button>
+              </div>
+            </div>
           `;
-        });
-      })
-      .catch(err => {
-        const errEl = document.getElementById("error");
-        if (errEl) errEl.textContent = "Error: " + err.message;
-      });
-    }
-  </script>
+        }).join("")}
+      </div>
+      <div class="chat-view" id="chatView">
+        <div class="empty-state">
+          <span>💬</span>
+          <p>Kisi user ko click karo</p>
+        </div>
+      </div>
+    `;
+
+    if (activeUser) showChat(activeUser);
+  }
+
+  function showChat(username) {
+    activeUser = username;
+
+    // Active card highlight
+    document.querySelectorAll(".user-card").forEach(c => c.classList.remove("active"));
+    const card = document.getElementById("card-" + username);
+    if (card) card.classList.add("active");
+
+    const grouped = {};
+    allChats.forEach(chat => {
+      if (!grouped[chat.username]) grouped[chat.username] = [];
+      grouped[chat.username].push(chat);
+    });
+
+    const chats = grouped[username] || [];
+    const initial = username.charAt(0).toUpperCase();
+
+    const chatView = document.getElementById("chatView");
+    chatView.classList.add("mobile-show");
+
+    chatView.innerHTML = `
+      <div class="chat-header">
+        <button class="back-btn" onclick="goBack()">← Back</button>
+        <div class="chat-header-avatar">${initial}</div>
+        <div>
+          <div class="chat-header-name">${username}</div>
+          <div class="chat-header-msgs">${chats.length} messages</div>
+        </div>
+      </div>
+      <div class="chat-messages" id="chatMessages">
+        ${chats.slice().reverse().map(chat => `
+          <div class="msg-row">
+            <div class="msg-time">${chat.created_at || ""}</div>
+            <div class="msg-label right">👤 ${username}</div>
+            <div class="msg-user-bubble">${chat.user_message}</div>
+            <div class="msg-label">🤖 Hurairah AI</div>
+            <div class="msg-bot-bubble">${chat.ai_reply}</div>
+          </div>
+        `).join("")}
+      </div>
+    `;
+
+    // Scroll to bottom
+    const msgs = document.getElementById("chatMessages");
+    if (msgs) msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  function goBack() {
+    const chatView = document.getElementById("chatView");
+    chatView.classList.remove("mobile-show");
+    activeUser = null;
+  }
+
+  function deleteUser(event, username) {
+    event.stopPropagation();
+    if (!confirm(`"${username}" ki poori chat delete karna chahte ho?`)) return;
+
+    fetch(`${API}?username=${encodeURIComponent(username)}`, {
+      method: "DELETE",
+      headers: { "x-admin-password": pass }
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        allChats = allChats.filter(c => c.username !== username);
+        if (activeUser === username) activeUser = null;
+        renderPanel();
+      }
+    })
+    .catch(err => alert("Error: " + err.message));
+  }
+</script>
 </body>
 </html>
