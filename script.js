@@ -1,12 +1,6 @@
 const API_URL = "https://hurairah-ai.annu8857818.workers.dev";
-
-let username = localStorage.getItem("hurairah_username");
-
-if (username) {
-  document.getElementById("nameModal").style.display = "none";
-const API_URL = "https://hurairah-ai.annu8857818.workers.dev";
 const ELEVENLABS_API_KEY = "sk_ba5c973ec598f00b7293cc1f37675eb24f52363489ea82be";
-const ELEVENLABS_VOICE_ID = "4wf10lgibMnboGJGCLrP";
+const ELEVENLABS_VOICE_ID ="4wf10lgibMnboGJGCLrP";
 
 let username = localStorage.getItem("hurairah_username");
 
@@ -80,11 +74,11 @@ async function speakWithElevenLabs(text, btn) {
       },
       body: JSON.stringify({
         text: text,
-        model_id: "eleven_multilingual_v2",
+        model_id: "eleven_turbo_v2_5",
         voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.8,
-          style: 0.3,
+          stability: 0.4,
+          similarity_boost: 0.9,
+          style: 0.5,
           use_speaker_boost: true
         }
       })
@@ -95,18 +89,14 @@ async function speakWithElevenLabs(text, btn) {
     const blob = await res.blob();
     const audioUrl = URL.createObjectURL(blob);
     const audio = new Audio(audioUrl);
-    
+
     btn.textContent = "🔊 Suno";
     btn.disabled = false;
-
     audio.play();
 
-    audio.onended = () => {
-      URL.revokeObjectURL(audioUrl);
-    };
+    audio.onended = () => URL.revokeObjectURL(audioUrl);
 
   } catch (err) {
-    // Fallback to browser voice
     btn.textContent = "🔊 Suno";
     btn.disabled = false;
     const speech = new SpeechSynthesisUtterance(text);
