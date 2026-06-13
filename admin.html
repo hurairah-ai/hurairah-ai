@@ -307,11 +307,12 @@
   let allChats = [];
   let activeUser = null;
 
-  // ✅ 12-hour AM/PM format function
+  // ✅ 12-hour AM/PM format — India IST timezone
   function formatTime(raw) {
     const date = new Date(raw);
     if (isNaN(date)) return raw;
     return date.toLocaleString('en-US', {
+      timeZone: 'Asia/Kolkata',
       year: 'numeric',
       month: 'short',
       day: 'numeric',
