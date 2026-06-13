@@ -54,18 +54,52 @@ function removeWelcomeScreen() {
   }
 }
 
-function addMessage(text, type) {
+// Image preview input ke upar
+function createImagePreview(dataUrl, fileName) {
+  removeImagePreview();
+  const preview = document.createElement("div");
+  preview.id = "imagePreview";
+  preview.innerHTML = `
+    <div class="preview-inner">
+      <img src="${dataUrl}" alt="preview">
+      <button class="preview-remove" id="removePreviewBtn">✕</button>
+    </div>
+    <span class="preview-name">${fileName}</span>
+  `;
+  const inputArea = document.querySelector(".input-area");
+  inputArea.parentNode.insertBefore(preview, inputArea);
+  document.getElementById("removePreviewBtn").addEventListener("click", () => {
+    removeImagePreview();
+    selectedImage = null;
+    imageInput.value = "";
+  });
+}
+
+function removeImagePreview() {
+  const existing = document.getElementById("imagePreview");
+  if (existing) existing.remove();
+}
+
+// Chat bubble mein image + text
+function addMessage(text, type, imageData = null) {
   const msg = document.createElement("div");
   msg.className = `message ${type}`;
   msg.style.opacity = "0";
   msg.style.transform = type === "user" ? "translateX(20px)" : "translateX(-20px)";
 
-  if (type === "bot") {
-    msg.innerHTML = `<div class="msg-text">${text}</div><button class="speak-btn">🔊</button>`;
-  } else {
-    msg.innerHTML = `<div class="msg-text">${text}</div>`;
+  let content = "";
+
+  if (imageData && type === "user") {
+    content += `<img class="msg-image" src="${imageData}" alt="uploaded">`;
   }
 
+  if (type === "bot") {
+    content += `<div class="msg-text">${text}</div><button class="speak-btn">🔊</button>`;
+  } else {
+    content += `<div class="msg-text">${text}</div>`;
+  }
+
+  msg.innerHTML = content;
   chatBox.appendChild(msg);
 
   requestAnimationFrame(() => {
@@ -104,7 +138,7 @@ function removeThinking() {
 
 async function sendMessage() {
   const text = input.value.trim();
-  if (!text) return;
+  if (!text && !selectedImage) return;
 
   if (text.toLowerCase() === "mehajabeen pgl hu") {
     hurairahMode = true;
@@ -112,10 +146,15 @@ async function sendMessage() {
   }
 
   removeWelcomeScreen();
-  addMessage(text, "user");
+  addMessage(text || "", "user", selectedImage);
+  removeImagePreview();
   input.value = "";
   input.style.height = "24px";
   showThinking();
+
+  const imageToSend = selectedImage;
+  selectedImage = null;
+  imageInput.value = "";
 
   try {
     const res = await fetch(API_URL, {
@@ -123,15 +162,14 @@ async function sendMessage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         username,
-        message: text,
-        image: selectedImage,
+        message: text || "Is image mein kya hai?",
+        image: imageToSend,
         hurairahMode
       })
     });
     const data = await res.json();
     removeThinking();
     addMessage(data.reply || "Koi response nahi mila", "bot");
-    selectedImage = null;
   } catch (err) {
     removeThinking();
     addMessage("Error: " + err.message, "bot");
@@ -182,7 +220,7 @@ imageInput.addEventListener("change", () => {
   const reader = new FileReader();
   reader.onload = () => {
     selectedImage = reader.result;
-    addMessage("📷 Image: " + file.name, "user");
+    createImagePreview(reader.result, file.name);
   };
   reader.readAsDataURL(file);
 });
