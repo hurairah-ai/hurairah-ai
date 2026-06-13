@@ -1,0 +1,22 @@
+{
+  "name": "Hurairah AI",
+  "short_name": "Hurairah AI",
+  "description": "Hurairah AI Chatbot",
+  "start_url": "/hurairah-ai/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#7c3aed",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
