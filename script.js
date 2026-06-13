@@ -48,9 +48,14 @@ const recordingPopup = document.getElementById("recordingPopup");
 
 let selectedImage = null;
 
+// ✅ FIXED: 12-hour AM/PM format
 function getTime() {
   const now = new Date();
-  return now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+  return now.toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true
+  });
 }
 
 function removeWelcomeScreen() {
