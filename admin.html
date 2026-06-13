@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hurairah AI Admin</title>
+
+<style>
+body{
+background:#0f172a;
+color:white;
+font-family:Arial;
+padding:20px;
+}
+
+h1{
+text-align:center;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:20px;
+}
+
+th,td{
+border:1px solid #333;
+padding:10px;
+text-align:left;
+}
+
+th{
+background:#7c3aed;
+}
+
+tr:nth-child(even){
+background:#111827;
+}
+</style>
+
+</head>
+<body>
+
+<h1>Hurairah AI Admin Panel</h1>
+
+<table id="chatTable">
+
+<tr>
+<th>User</th>
+<th>Message</th>
+<th>AI Reply</th>
+<th>Time</th>
+</tr>
+
+</table>
+
+<script>
+
+fetch("https://hurairah-ai.annu8857818.workers.dev/admin")
+.then(r=>r.json())
+.then(data=>{
+
+const table =
+document.getElementById("chatTable");
+
+data.forEach(chat=>{
+
+table.innerHTML += `
+<tr>
+<td>${chat.username}</td>
+<td>${chat.user_message}</td>
+<td>${chat.ai_reply}</td>
+<td>${chat.created_at}</td>
+</tr>
+`;
+
+});
+
+});
+
+</script>
+
+</body>
+</html>
