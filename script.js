@@ -65,6 +65,42 @@ function removeWelcomeScreen() {
   }
 }
 
+// --- 🔥 UPGRADE: RICH TEXT, MARKDOWN & CODE BLOCK PARSER ---
+function parseMarkdown(text) {
+  if (!text) return "";
+  
+  let html = text;
+
+  // 1. Multi-line Code Blocks with Copy Button (```code
+```)
+  html = html.replace(/```([\s\S]*?)```/g, (match, code) => {
+    const cleanCode = code.replace(/</g, "&lt;").replace(/>/g, "&gt;").trim();
+    return `
+      <div class="code-block-container" style="margin: 12px 0; border-radius: 10px; overflow: hidden; background: #1e1e2e; font-family: monospace; border: 1px solid rgba(255,255,255,0.1); text-align: left;">
+        <div class="code-header" style="background: #11111b; padding: 8px 14px; font-size: 12px; color: #a6adc8; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05);">
+          <span>Code</span>
+          <button onclick="navigator.clipboard.writeText(\`${cleanCode.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`); this.textContent='Copied! 😎'; this.style.color='#a78bfa'; setTimeout(()=>{this.textContent='Copy'; this.style.color='white'}, 2000)" style="background: rgba(255,255,255,0.1); border: none; color: white; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 11px; transition: 0.2s;">Copy</button>
+        </div>
+        <pre style="padding: 14px; overflow-x: auto; color: #cdd6f4; font-size: 13px; line-height: 1.6; font-family: 'Courier New', Courier, monospace;"><code>${cleanCode}</code></pre>
+      </div>
+    `;
+  });
+
+  // 2. Inline Code (`code`)
+  html = html.replace(/`([^`]+)`/g, '<code style="background: rgba(124,58,237,0.18); color: #c084fc; padding: 2px 6px; border-radius: 6px; font-family: monospace; font-size: 13px;">$1</code>');
+
+  // 3. Bold Text (**bold**)
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong style="color: #ffffff; font-weight: 700;">$1</strong>');
+
+  // 4. Bullet Lists (* list)
+  html = html.replace(/^\*\s+(.+)$/gm, '<li style="margin-left: 20px; margin-bottom: 6px; color: #e2e8f0; text-align: left;">$1</li>');
+
+  // 5. Line Breaks
+  html = html.replace(/\n/g, "<br>");
+
+  return html;
+}
+
 async function speakWithElevenLabs(text, btn) {
   try {
     btn.textContent = "⏳ Loading...";
@@ -79,12 +115,7 @@ async function speakWithElevenLabs(text, btn) {
       body: JSON.stringify({
         text: text,
         model_id: "eleven_turbo_v2_5",
-        voice_settings: {
-          stability: 0.4,
-          similarity_boost: 0.9,
-          style: 0.5,
-          use_speaker_boost: true
-        }
+        voice_settings: { stability: 0.4, similarity_boost: 0.9, style: 0.5, use_speaker_boost: true }
       })
     });
 
@@ -110,6 +141,7 @@ async function speakWithElevenLabs(text, btn) {
   }
 }
 
+// --- 🔥 UPGRADE: REAL-TIME STREAMING-STYLE TYPING ANIMATION ---
 function addMessage(text, type, animate = false, imageData = null) {
   const msg = document.createElement("div");
   msg.className = `message ${type}`;
@@ -121,17 +153,14 @@ function addMessage(text, type, animate = false, imageData = null) {
         <div class="bot-name">Hurairah AI</div>
       </div>
       <div class="msg-text"></div>
-      <button class="speak-btn" style="display:none">🔊 Suno</button>
+      <button class="speak-btn" style="display:none; margin-top: 8px;">🔊 Suno</button>
       <div class="time">${getTime()}</div>
     `;
   } else {
-    let imageHTML = "";
-    if (imageData) {
-      imageHTML = `<img src="${imageData}" style="max-width:200px; max-height:200px; border-radius:12px; display:block; margin-bottom:6px;" />`;
-    }
+    let imageHTML = imageData ? `<img src="${imageData}" style="max-width:200px; max-height:200px; border-radius:12px; display:block; margin-bottom:6px;" />` : "";
     msg.innerHTML = `
       ${imageHTML}
-      ${text ? `<div class="msg-text">${text}</div>` : ""}
+      ${text ? `<div class="msg-text">${parseMarkdown(text)}</div>` : ""}
       <div class="time">${getTime()}</div>
     `;
   }
@@ -143,33 +172,31 @@ function addMessage(text, type, animate = false, imageData = null) {
 
   if (type === "bot" && animate) {
     const speakBtn = msg.querySelector(".speak-btn");
-    const cursor = document.createElement("span");
-    cursor.className = "cursor";
-    textEl.appendChild(cursor);
-
+    let currentText = "";
     let i = 0;
+
     const interval = setInterval(() => {
       if (i < text.length) {
-        cursor.insertAdjacentText("beforebegin", text[i]);
+        currentText += text[i];
+        textEl.innerHTML = parseMarkdown(currentText) + '<span class="cursor" style="display: inline-block; width: 2px; height: 14px; background: #7c3aed; margin-left: 3px; animation: blink 0.6s infinite;">|</span>';
         i++;
         chatBox.scrollTop = chatBox.scrollHeight;
       } else {
         clearInterval(interval);
-        cursor.remove();
+        const cursor = textEl.querySelector(".cursor");
+        if (cursor) cursor.remove();
+        textEl.innerHTML = parseMarkdown(text); 
+        
         speakBtn.style.display = "inline-block";
-        speakBtn.addEventListener("click", () => {
-          speakWithElevenLabs(text, speakBtn);
-        });
+        speakBtn.addEventListener("click", () => speakWithElevenLabs(text, speakBtn));
       }
-    }, 22);
+    }, 15);
 
   } else if (type === "bot") {
-    if (textEl) textEl.textContent = text;
+    if (textEl) textEl.innerHTML = parseMarkdown(text);
     const speakBtn = msg.querySelector(".speak-btn");
     speakBtn.style.display = "inline-block";
-    speakBtn.addEventListener("click", () => {
-      speakWithElevenLabs(text, speakBtn);
-    });
+    speakBtn.addEventListener("click", () => speakWithElevenLabs(text, speakBtn));
   }
 
   chatBox.scrollTop = chatBox.scrollHeight;
@@ -182,23 +209,10 @@ function showImagePreview(imageData, fileName) {
 
   const preview = document.createElement("div");
   preview.id = "imagePreview";
-  preview.style.cssText = `
-    position: relative;
-    display: inline-block;
-    margin: 8px 12px;
-    border-radius: 12px;
-    overflow: hidden;
-  `;
+  preview.style.cssText = `position: relative; display: inline-block; margin: 8px 12px; border-radius: 12px; overflow: hidden;`;
   preview.innerHTML = `
     <img src="${imageData}" style="max-width:120px; max-height:120px; border-radius:12px; display:block;" />
-    <button onclick="removeImagePreview()" style="
-      position:absolute; top:4px; right:4px;
-      background:rgba(0,0,0,0.6); border:none;
-      color:white; border-radius:50%;
-      width:22px; height:22px;
-      font-size:12px; cursor:pointer;
-      display:flex; align-items:center; justify-content:center;
-    ">✕</button>
+    <button onclick="removeImagePreview()" style="position:absolute; top:4px; right:4px; background:rgba(0,0,0,0.6); border:none; color:white; border-radius:50%; width:22px; height:22px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center;">✕</button>
   `;
 
   const inputArea = document.querySelector(".input-area");
@@ -211,7 +225,6 @@ function removeImagePreview() {
   if (preview) preview.remove();
 }
 
-// 🔥 Yahan tumhara emoji ekdum properly lag gaya hai bina kisi syntax error ke!
 function showThinking() {
   const thinking = document.createElement("div");
   thinking.className = "thinking";
@@ -251,12 +264,7 @@ async function sendMessage() {
     const res = await fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        username,
-        message: text || "Is image mein kya hai?",
-        image: selectedImage,
-        hurairahMode
-      })
+      body: JSON.stringify({ username, message: text || "Is image mein kya hai?", image: selectedImage, hurairahMode })
     });
     const data = await res.json();
     removeThinking();
@@ -293,9 +301,7 @@ if (SpeechRecognition && micBtn) {
   recognition.onend = () => { if (recordingPopup) recordingPopup.style.display = "none"; };
   recognition.onresult = (event) => {
     let transcript = "";
-    for (let i = 0; i < event.results.length; i++) {
-      transcript += event.results[i][0].transcript;
-    }
+    for (let i = 0; i < event.results.length; i++) { transcript += event.results[i][0].transcript; }
     input.value = transcript;
   };
   micBtn.addEventListener("click", () => {
