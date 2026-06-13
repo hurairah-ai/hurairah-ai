@@ -36,8 +36,6 @@ function chipClick(text) {
 }
 
 let messages = JSON.parse(localStorage.getItem("hurairah_chat") || "[]");
-
-// ✅ FIXED: sessionStorage use kiya - website band hote hi off ho jayega
 let hurairahMode = sessionStorage.getItem("hurairah_mode") === "true";
 
 const chatBox = document.getElementById("chatBox");
@@ -50,7 +48,6 @@ const recordingPopup = document.getElementById("recordingPopup");
 
 let selectedImage = null;
 
-// ✅ 12-hour AM/PM format
 function getTime() {
   const now = new Date();
   return now.toLocaleTimeString('en-IN', {
@@ -113,7 +110,7 @@ async function speakWithElevenLabs(text, btn) {
   }
 }
 
-function addMessage(text, type, animate = false) {
+function addMessage(text, type, animate = false, imageData = null) {
   const msg = document.createElement("div");
   msg.className = `message ${type}`;
 
@@ -128,8 +125,14 @@ function addMessage(text, type, animate = false) {
       <div class="time">${getTime()}</div>
     `;
   } else {
+    // ✅ FIXED: Image preview chatbox mein dikhao
+    let imageHTML = "";
+    if (imageData) {
+      imageHTML = `<img src="${imageData}" style="max-width:200px; max-height:200px; border-radius:12px; display:block; margin-bottom:6px;" />`;
+    }
     msg.innerHTML = `
-      <div class="msg-text">${text}</div>
+      ${imageHTML}
+      ${text ? `<div class="msg-text">${text}</div>` : ""}
       <div class="time">${getTime()}</div>
     `;
   }
@@ -162,7 +165,7 @@ function addMessage(text, type, animate = false) {
     }, 22);
 
   } else if (type === "bot") {
-    textEl.textContent = text;
+    if (textEl) textEl.textContent = text;
     const speakBtn = msg.querySelector(".speak-btn");
     speakBtn.style.display = "inline-block";
     speakBtn.addEventListener("click", () => {
@@ -173,6 +176,42 @@ function addMessage(text, type, animate = false) {
   chatBox.scrollTop = chatBox.scrollHeight;
   messages.push({ text, type });
   localStorage.setItem("hurairah_chat", JSON.stringify(messages));
+}
+
+// ✅ FIXED: Image preview input area mein dikhao
+function showImagePreview(imageData, fileName) {
+  // Pehle purana preview hatao
+  removeImagePreview();
+
+  const preview = document.createElement("div");
+  preview.id = "imagePreview";
+  preview.style.cssText = `
+    position: relative;
+    display: inline-block;
+    margin: 8px 12px;
+    border-radius: 12px;
+    overflow: hidden;
+  `;
+  preview.innerHTML = `
+    <img src="${imageData}" style="max-width:120px; max-height:120px; border-radius:12px; display:block;" />
+    <button onclick="removeImagePreview()" style="
+      position:absolute; top:4px; right:4px;
+      background:rgba(0,0,0,0.6); border:none;
+      color:white; border-radius:50%;
+      width:22px; height:22px;
+      font-size:12px; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+    ">✕</button>
+  `;
+
+  const inputArea = document.querySelector(".input-area");
+  inputArea.parentNode.insertBefore(preview, inputArea);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function removeImagePreview() {
+  const preview = document.getElementById("imagePreview");
+  if (preview) preview.remove();
 }
 
 function showThinking() {
@@ -198,14 +237,15 @@ async function sendMessage() {
   const text = input.value.trim();
   if (!text && !selectedImage) return;
 
-  // ✅ FIXED: sessionStorage use kiya
   if (text.toLowerCase() === "mehajabeen pgl hu") {
     hurairahMode = true;
     sessionStorage.setItem("hurairah_mode", "true");
   }
 
   removeWelcomeScreen();
-  if (text) addMessage(text, "user");
+  // ✅ FIXED: Image preview chatbox mein dikhao aur input preview hatao
+  addMessage(text, "user", false, selectedImage);
+  removeImagePreview();
   input.value = "";
   input.style.height = "24px";
   showThinking();
@@ -216,7 +256,7 @@ async function sendMessage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         username,
-        message: text,
+        message: text || "Is image mein kya hai?",
         image: selectedImage,
         hurairahMode
       })
@@ -225,6 +265,7 @@ async function sendMessage() {
     removeThinking();
     addMessage(data.reply || "Koi response nahi mila", "bot", true);
     selectedImage = null;
+    imageInput.value = "";
   } catch (err) {
     removeThinking();
     addMessage("Error: " + err.message, "bot", true);
@@ -269,13 +310,14 @@ if (SpeechRecognition && micBtn) {
 
 attachBtn.addEventListener("click", () => imageInput.click());
 
+// ✅ FIXED: Image select hone pe preview dikhao, direct send mat karo
 imageInput.addEventListener("change", () => {
   const file = imageInput.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = () => {
     selectedImage = reader.result;
-    addMessage("📷 Image: " + file.name, "user");
+    showImagePreview(selectedImage, file.name);
   };
   reader.readAsDataURL(file);
 });
