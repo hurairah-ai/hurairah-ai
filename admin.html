@@ -1,11 +1,8 @@
-<!DOCTYPE html>
-<html>
+<!DOCTYPE html><html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Hurairah AI Admin</title>
-
-<style>
+<title>Hurairah AI Admin</title><style>
 body{
 background:#0f172a;
 color:white;
@@ -36,50 +33,47 @@ background:#7c3aed;
 tr:nth-child(even){
 background:#111827;
 }
-</style>
-
-</head>
-<body>
-
-<script>
+</style><script>
 const pass = prompt("Admin Password");
 
 if(pass !== "Hurairah786"){
-  document.body.innerHTML = `
+  document.write(`
   <h1 style="
   color:red;
   text-align:center;
   margin-top:100px;
   font-size:50px;">
   Access Denied
-  </h1>`;
-  throw new Error("Access Denied");
+  </h1>
+  `);
+} else {
+  window.ADMIN_ACCESS = true;
 }
-</script>
+</script></head><body><div id="adminPanel"></div><script>
+
+if(window.ADMIN_ACCESS){
+
+document.getElementById("adminPanel").innerHTML = `
 <h1>Hurairah AI Admin Panel</h1>
 
-
 <table id="chatTable">
-
 <tr>
 <th>User</th>
 <th>Message</th>
 <th>AI Reply</th>
 <th>Time</th>
 </tr>
-
 </table>
-
-<script>
+`;
 
 fetch("https://hurairah-ai.annu8857818.workers.dev/admin")
-.then(r=>r.json())
-.then(data=>{
+.then(r => r.json())
+.then(data => {
 
 const table =
 document.getElementById("chatTable");
 
-data.forEach(chat=>{
+data.forEach(chat => {
 
 table.innerHTML += `
 <tr>
@@ -94,7 +88,6 @@ table.innerHTML += `
 
 });
 
-</script>
-
-</body>
+}
+</script></body>
 </html>
