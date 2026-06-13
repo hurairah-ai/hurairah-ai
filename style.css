@@ -450,6 +450,73 @@ textarea::placeholder { color: #64748b; }
   box-shadow: 0 2px 10px rgba(124,58,237,0.3);
 }
 
+/* IMAGE PREVIEW INPUT KE UPAR */
+#imagePreview {
+  position: fixed;
+  bottom: 80px;
+  left: 12px;
+  right: 12px;
+  background: rgba(15,10,50,0.95);
+  border: 1px solid rgba(124,58,237,0.4);
+  border-radius: 16px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 998;
+  backdrop-filter: blur(20px);
+}
+
+.preview-inner {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  flex-shrink: 0;
+}
+
+.preview-inner img {
+  width: 60px;
+  height: 60px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.preview-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ef4444;
+  color: white;
+  border: none;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+}
+
+.preview-name {
+  color: #94a3b8;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* CHAT BUBBLE MEIN IMAGE */
+.msg-image {
+  width: 100%;
+  max-width: 240px;
+  border-radius: 12px;
+  margin-bottom: 8px;
+  display: block;
+  object-fit: cover;
+}
+
 /* MOBILE */
 @media(max-width: 768px) {
   .welcome-screen h1 { font-size: 38px; }
