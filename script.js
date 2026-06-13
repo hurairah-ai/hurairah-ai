@@ -125,7 +125,6 @@ function addMessage(text, type, animate = false, imageData = null) {
       <div class="time">${getTime()}</div>
     `;
   } else {
-    // ✅ FIXED: Image preview chatbox mein dikhao
     let imageHTML = "";
     if (imageData) {
       imageHTML = `<img src="${imageData}" style="max-width:200px; max-height:200px; border-radius:12px; display:block; margin-bottom:6px;" />`;
@@ -178,9 +177,7 @@ function addMessage(text, type, animate = false, imageData = null) {
   localStorage.setItem("hurairah_chat", JSON.stringify(messages));
 }
 
-// ✅ FIXED: Image preview input area mein dikhao
 function showImagePreview(imageData, fileName) {
-  // Pehle purana preview hatao
   removeImagePreview();
 
   const preview = document.createElement("div");
@@ -214,6 +211,7 @@ function removeImagePreview() {
   if (preview) preview.remove();
 }
 
+// 🔥 Yahan tumhara emoji ekdum properly lag gaya hai bina kisi syntax error ke!
 function showThinking() {
   const thinking = document.createElement("div");
   thinking.className = "thinking";
@@ -222,7 +220,7 @@ function showThinking() {
     <div class="dot"></div>
     <div class="dot"></div>
     <div class="dot"></div>
-    <span class="thinking-text">Hurairah AI likh raha hai...</span>
+    <span class="thinking-text">Hurairah AI likh raha hai...😎</span>
   `;
   chatBox.appendChild(thinking);
   chatBox.scrollTop = chatBox.scrollHeight;
@@ -243,7 +241,6 @@ async function sendMessage() {
   }
 
   removeWelcomeScreen();
-  // ✅ FIXED: Image preview chatbox mein dikhao aur input preview hatao
   addMessage(text, "user", false, selectedImage);
   removeImagePreview();
   input.value = "";
@@ -310,7 +307,6 @@ if (SpeechRecognition && micBtn) {
 
 attachBtn.addEventListener("click", () => imageInput.click());
 
-// ✅ FIXED: Image select hone pe preview dikhao, direct send mat karo
 imageInput.addEventListener("change", () => {
   const file = imageInput.files[0];
   if (!file) return;
