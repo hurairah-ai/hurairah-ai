@@ -14,15 +14,15 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Hurairah AI">
 <script>
-  // ✅ Force fresh load - cache fix
+  // ✅ Service worker unregister + force fresh load
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(regs => {
+      regs.forEach(reg => reg.unregister());
+    });
+  }
   if (!sessionStorage.getItem('loaded')) {
     sessionStorage.setItem('loaded', '1');
     location.reload(true);
-  }
-</script>
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js');
   }
 </script>
 </head>
