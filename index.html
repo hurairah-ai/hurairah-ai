@@ -7,12 +7,12 @@
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Hurairah AI</title>
-<link rel="stylesheet" href="style.css">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#7c3aed">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Hurairah AI">
+
 <script>
   // ✅ Service worker unregister + force fresh load
   if ('serviceWorker' in navigator) {
@@ -24,6 +24,22 @@
     sessionStorage.setItem('loaded', '1');
     location.reload(true);
   }
+
+  // 🔥 PERMANENT CACHE FIX: CSS aur JS ko dynamic unique version ke sath load karna
+  const cacheBusterVersion = new Date().getTime();
+
+  // 1. Dynamic CSS Link
+  const cssLink = document.createElement('link');
+  cssLink.rel = 'stylesheet';
+  cssLink.href = 'style.css?v=' + cacheBusterVersion;
+  document.head.appendChild(cssLink);
+
+  // 2. Dynamic JS Script (Jo niche body ke baad load hota, use yahan se handle kiya hai)
+  window.addEventListener('DOMContentLoaded', () => {
+    const jsScript = document.createElement('script');
+    jsScript.src = 'script.js?v=' + cacheBusterVersion;
+    document.body.appendChild(jsScript);
+  });
 </script>
 </head>
 <body>
@@ -91,6 +107,7 @@
   <span>🎤</span> Listening...
 </div>
 
-<script src="script.js"></script>
-</body>
+<!-- Note: Purana static script tag yahan se hata diya hai kyunki upar dynamic chal raha hai -->
+</bod
+  y>
 </html>
