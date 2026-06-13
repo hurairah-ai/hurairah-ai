@@ -1,3 +1,4 @@
+alert("NEW SCRIPT LOADED");
 const API_URL = "https://hurairah-ai.annu8857818.workers.dev";
 
 let username = localStorage.getItem("hurairah_username");
