@@ -1,4 +1,3 @@
-alert("NEW SCRIPT LOADED");
 const API_URL = "https://hurairah-ai.annu8857818.workers.dev";
 
 let username = localStorage.getItem("hurairah_username");
@@ -56,8 +55,7 @@ function addMessage(text, type) {
 const msg =
 document.createElement("div");
 
-msg.className =
-"message ${type}";
+msg.className = `message ${type}`;
 
 if (type === "bot") {
 
@@ -122,7 +120,11 @@ thinking.className =
 thinking.id =
 "thinking";
 
-thinking.innerHTML = "<div class="dot"></div> <div class="dot"></div> <div class="dot"></div>";
+thinking.innerHTML = `
+<div class="dot"></div>
+<div class="dot"></div>
+<div class="dot"></div>
+`;
 
 chatBox.appendChild(thinking);
 
