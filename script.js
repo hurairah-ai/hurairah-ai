@@ -2,30 +2,39 @@ const API_URL = "https://hurairah-ai.annu8857818.workers.dev";
 
 let username = localStorage.getItem("hurairah_username");
 
-if (!username) {
-
-username = prompt("Apna Naam Likho");
-
-while (!username || username.trim() === "") {
-
-username = prompt("Naam dalna zaroori hai");
-
+if (username) {
+  document.getElementById("nameModal").style.display = "none";
+} else {
+  document.getElementById("nameModal").style.display = "flex";
 }
 
-username = username.trim();
+document.getElementById("nameSubmitBtn").addEventListener("click", () => {
+  const val = document.getElementById("nameInput").value.trim();
+  if (!val) {
+    document.getElementById("nameInput").classList.add("shake");
+    document.getElementById("nameInput").placeholder = "Naam dalna zaroori hai! ⚠️";
+    setTimeout(() => document.getElementById("nameInput").classList.remove("shake"), 500);
+    return;
+  }
+  username = val;
+  localStorage.setItem("hurairah_username", username);
+  const modal = document.getElementById("nameModal");
+  modal.style.opacity = "0";
+  modal.style.transform = "scale(0.95)";
+  setTimeout(() => modal.style.display = "none", 300);
+});
 
-localStorage.setItem(
-"hurairah_username",
-username
-);
+document.getElementById("nameInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") document.getElementById("nameSubmitBtn").click();
+});
+
+function chipClick(text) {
+  document.getElementById("messageInput").value = text;
+  sendMessage();
 }
 
-let messages = JSON.parse(
-localStorage.getItem("hurairah_chat") || "[]"
-);
-
-let hurairahMode =
-localStorage.getItem("hurairah_mode") === "true";
+let messages = JSON.parse(localStorage.getItem("hurairah_chat") || "[]");
+let hurairahMode = localStorage.getItem("hurairah_mode") === "true";
 
 const chatBox = document.getElementById("chatBox");
 const input = document.getElementById("messageInput");
@@ -33,368 +42,155 @@ const sendBtn = document.getElementById("sendBtn");
 const micBtn = document.getElementById("micBtn");
 const attachBtn = document.getElementById("attachBtn");
 const imageInput = document.getElementById("imageInput");
+const recordingPopup = document.getElementById("recordingPopup");
 
 let selectedImage = null;
 
-const recordingPopup =
-document.getElementById("recordingPopup");
-
 function removeWelcomeScreen() {
-
-const welcome =
-document.querySelector(".welcome-screen");
-
-if (welcome) {
-welcome.remove();
-}
-
+  const welcome = document.querySelector(".welcome-screen");
+  if (welcome) {
+    welcome.style.opacity = "0";
+    setTimeout(() => welcome.remove(), 300);
+  }
 }
 
 function addMessage(text, type) {
+  const msg = document.createElement("div");
+  msg.className = `message ${type}`;
+  msg.style.opacity = "0";
+  msg.style.transform = type === "user" ? "translateX(20px)" : "translateX(-20px)";
 
-const msg =
-document.createElement("div");
-
-msg.className = `message ${type}`;
-
-if (type === "bot") {
-
-msg.innerHTML = `
-  <div>${text}</div>
-  <button class="speak-btn">🔊</button>
-`;
-
-} else {
-
-msg.textContent = text;
-
-}
-
-chatBox.appendChild(msg);
-
-if (type === "bot") {
-
-const speakBtn =
-msg.querySelector(".speak-btn");
-
-speakBtn.addEventListener(
-  "click",
-  () => {
-
-    const speech =
-    new SpeechSynthesisUtterance(text);
-
-    speech.lang = "en-IN";
-    speech.rate = 1;
-
-    speechSynthesis.speak(speech);
-
+  if (type === "bot") {
+    msg.innerHTML = `<div class="msg-text">${text}</div><button class="speak-btn">🔊</button>`;
+  } else {
+    msg.innerHTML = `<div class="msg-text">${text}</div>`;
   }
-);
 
-}
+  chatBox.appendChild(msg);
 
-chatBox.scrollTop =
-chatBox.scrollHeight;
+  requestAnimationFrame(() => {
+    msg.style.transition = "all 0.3s ease";
+    msg.style.opacity = "1";
+    msg.style.transform = "translateX(0)";
+  });
 
-messages.push({
-text,
-type
-});
+  if (type === "bot") {
+    msg.querySelector(".speak-btn").addEventListener("click", () => {
+      const speech = new SpeechSynthesisUtterance(text);
+      speech.lang = "en-IN";
+      speech.rate = 1;
+      speechSynthesis.speak(speech);
+    });
+  }
 
-localStorage.setItem(
-"hurairah_chat",
-JSON.stringify(messages)
-);
-
+  chatBox.scrollTop = chatBox.scrollHeight;
+  messages.push({ text, type });
+  localStorage.setItem("hurairah_chat", JSON.stringify(messages));
 }
 
 function showThinking() {
-
-const thinking =
-document.createElement("div");
-
-thinking.className =
-"thinking";
-
-thinking.id =
-"thinking";
-
-thinking.innerHTML = `
-<div class="dot"></div>
-<div class="dot"></div>
-<div class="dot"></div>
-`;
-
-chatBox.appendChild(thinking);
-
-chatBox.scrollTop =
-chatBox.scrollHeight;
-
+  const thinking = document.createElement("div");
+  thinking.className = "thinking";
+  thinking.id = "thinking";
+  thinking.innerHTML = `<div class="dot"></div><div class="dot"></div><div class="dot"></div>`;
+  chatBox.appendChild(thinking);
+  chatBox.scrollTop = chatBox.scrollHeight;
 }
 
 function removeThinking() {
-
-const t =
-document.getElementById("thinking");
-
-if (t) t.remove();
-
+  const t = document.getElementById("thinking");
+  if (t) t.remove();
 }
 
 async function sendMessage() {
+  const text = input.value.trim();
+  if (!text) return;
 
-const text =
-input.value.trim();
-
-if (!text) return;
-
-if (
-text.toLowerCase() ===
-"mehajabeen pgl hu"
-) {
-
-hurairahMode = true;
-
-localStorage.setItem(
-  "hurairah_mode",
-  "true"
-);
-
-}
-
-removeWelcomeScreen();
-
-addMessage(text, "user");
-
-input.value = "";
-
-showThinking();
-
-try {
-
-const res = await fetch(
-  API_URL,
-  {
-    method: "POST",
-    headers: {
-      "Content-Type":
-      "application/json"
-    },
-    body: JSON.stringify({
-      username: username,
-      message: text,
-      image: selectedImage,
-      hurairahMode:
-      hurairahMode
-    })
+  if (text.toLowerCase() === "mehajabeen pgl hu") {
+    hurairahMode = true;
+    localStorage.setItem("hurairah_mode", "true");
   }
-);
 
-const data =
-await res.json();
-
-removeThinking();
-
-addMessage(
-  data.reply ||
-  "Koi response nahi mila",
-  "bot"
-);
-
-selectedImage = null;
-
-} catch (err) {
-
-removeThinking();
-
-addMessage(
-  "Error: " + err.message,
-  "bot"
-);
-
-}
-
-}
-
-sendBtn.addEventListener(
-"click",
-sendMessage
-);
-
-input.addEventListener(
-"keydown",
-(e) => {
-
-if (
-  e.key === "Enter" &&
-  !e.shiftKey
-) {
-
-  e.preventDefault();
-
-  sendMessage();
-
-}
-
-}
-);
-
-const SpeechRecognition =
-window.SpeechRecognition ||
-window.webkitSpeechRecognition;
-
-if (
-SpeechRecognition &&
-micBtn
-) {
-
-const recognition =
-new SpeechRecognition();
-
-recognition.lang =
-"en-IN";
-
-recognition.continuous =
-false;
-
-recognition.interimResults =
-true;
-
-recognition.onstart = () => {
-
-if (recordingPopup) {
-
-  recordingPopup.style.display =
-  "block";
-
-}
-
-};
-
-recognition.onend = () => {
-
-if (recordingPopup) {
-
-  recordingPopup.style.display =
-  "none";
-
-}
-
-};
-
-recognition.onresult =
-(event) => {
-
-let transcript = "";
-
-for (
-  let i = 0;
-  i < event.results.length;
-  i++
-) {
-
-  transcript +=
-  event.results[i][0]
-  .transcript;
-
-}
-
-input.value =
-transcript;
-
-};
-
-micBtn.addEventListener(
-"click",
-() => {
+  removeWelcomeScreen();
+  addMessage(text, "user");
+  input.value = "";
+  input.style.height = "24px";
+  showThinking();
 
   try {
-
-    recognition.start();
-
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username,
+        message: text,
+        image: selectedImage,
+        hurairahMode
+      })
+    });
+    const data = await res.json();
+    removeThinking();
+    addMessage(data.reply || "Koi response nahi mila", "bot");
+    selectedImage = null;
   } catch (err) {
-
-    console.log(err);
-
+    removeThinking();
+    addMessage("Error: " + err.message, "bot");
   }
-
 }
 
-);
+sendBtn.addEventListener("click", sendMessage);
 
+input.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+input.addEventListener("input", () => {
+  input.style.height = "24px";
+  input.style.height = Math.min(input.scrollHeight, 80) + "px";
+});
+
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (SpeechRecognition && micBtn) {
+  const recognition = new SpeechRecognition();
+  recognition.lang = "en-IN";
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.onstart = () => { if (recordingPopup) recordingPopup.style.display = "flex"; };
+  recognition.onend = () => { if (recordingPopup) recordingPopup.style.display = "none"; };
+  recognition.onresult = (event) => {
+    let transcript = "";
+    for (let i = 0; i < event.results.length; i++) {
+      transcript += event.results[i][0].transcript;
+    }
+    input.value = transcript;
+  };
+  micBtn.addEventListener("click", () => {
+    try { recognition.start(); } catch (err) { console.log(err); }
+  });
 } else {
-
-if (micBtn) {
-
-micBtn.style.display =
-"none";
-
+  if (micBtn) micBtn.style.display = "none";
 }
 
-}
+attachBtn.addEventListener("click", () => imageInput.click());
 
-attachBtn.addEventListener(
-"click",
-() => {
+imageInput.addEventListener("change", () => {
+  const file = imageInput.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    selectedImage = reader.result;
+    addMessage("📷 Image: " + file.name, "user");
+  };
+  reader.readAsDataURL(file);
+});
 
-imageInput.click();
-
-}
-);
-
-imageInput.addEventListener(
-"change",
-() => {
-
-const file =
-imageInput.files[0];
-
-if (!file) return;
-
-const reader =
-new FileReader();
-
-reader.onload = () => {
-
-  selectedImage =
-  reader.result;
-
-  addMessage(
-    "📷 Image Selected: " +
-    file.name,
-    "user"
-  );
-
-};
-
-reader.readAsDataURL(
-  file
-);
-
-}
-);
-
-const clearBtn =
-document.getElementById(
-"clearBtn"
-);
-
-clearBtn.addEventListener(
-"click",
-() => {
-
-localStorage.removeItem(
-  "hurairah_chat"
-);
-
-messages = [];
-
-chatBox.innerHTML = "";
-
-alert("Chat Deleted");
-
-location.reload();
-
-}
-);
+document.getElementById("clearBtn").addEventListener("click", () => {
+  if (confirm("Chat delete karna chahte ho?")) {
+    localStorage.removeItem("hurairah_chat");
+    messages = [];
+    location.reload();
+  }
+});
