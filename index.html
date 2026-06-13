@@ -4,72 +4,73 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Hurairah AI</title>
-
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+<div id="nameModal" class="name-modal-overlay">
+  <div class="name-modal-box">
+    <div class="name-modal-glow"></div>
+    <div class="name-modal-logo">
+      <img src="logo.png" alt="Logo">
+    </div>
+    <h2>Hurairah AI</h2>
+    <p>Apna naam likho shuru karne ke liye</p>
+    <div class="name-input-wrap">
+      <input type="text" id="nameInput" placeholder="Tumhara naam..." maxlength="30" autocomplete="off" />
+    </div>
+    <button id="nameSubmitBtn">
+      <span>Shuru Karo</span>
+      <span>→</span>
+    </button>
+  </div>
+</div>
+
 <div class="app">
-<div class="topbar">
-
-    <button id="clearBtn" onclick="clearChat()">🗑️</button>
+  <div class="topbar">
+    <button id="clearBtn">🗑️</button>
     <div class="brand">
-        ✨ Hurairah AI
+      <span class="brand-icon">✨</span>
+      <span>Hurairah AI</span>
     </div>
+    <div class="topbar-right"></div>
+  </div>
 
+  <div id="chatBox" class="chat-box">
+    <div class="welcome-screen">
+      <div class="online-badge">🟢 Online</div>
+      <div class="logo-wrap">
+        <img src="logo.png" alt="Hurairah AI">
+        <div class="logo-ring"></div>
+      </div>
+      <h1>Hello! 👋</h1>
+      <h2>I'm Hurairah AI</h2>
+      <p>How can I help you today?</p>
+      <div class="welcome-chips">
+        <span onclick="chipClick('Tumse kuch poochna tha')">💬 Baat karo</span>
+        <span onclick="chipClick('Meri madad karo')">🤝 Madad lo</span>
+        <span onclick="chipClick('Kuch interesting batao')">✨ Explore</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <button class="icon-btn" id="attachBtn">📎</button>
+    <input type="file" id="imageInput" accept="image/*" hidden>
+    <textarea id="messageInput" placeholder="Message likho..." rows="1"></textarea>
+    <button id="sendBtn">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+        <path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>
+      </svg>
+    </button>
+    <button class="icon-btn" id="micBtn">🎙️</button>
+  </div>
 </div>
 
-    <div id="chatBox" class="chat-box">
-
-        <div class="welcome-screen">
-
-            <div class="online-badge">
-                🟢 Online
-            </div>
-
-            <div class="logo-wrap">
-                <img src="logo.png" alt="MEHU Logo">
-            </div>
-
-            <h1>Hello! 👋</h1>
-
-            <h2>I'm Hurairah AI</h2>
-
-            <p>
-                How can I help you today?
-            </p>
-
-        </div>
-
-    </div>
-
-    <div class="input-area">
-
-        <button class="icon-btn" id="attachBtn">
-            📎
-        </button>
-<input type="file" id="imageInput" accept="image/*" hidden>
-        <textarea
-            id="messageInput"
-            placeholder="Message"
-            rows="1"></textarea>
-
-        <button id="sendBtn">
-            ➤
-        </button>
-
-        <button class="icon-btn" id="micBtn">
-            🎙️
-        </button>
-
-    </div>
-
-</div>
 <div id="recordingPopup" class="recording-popup">
-🎤 Listening...
+  <span>🎤</span> Listening...
 </div>
 
 <script src="script.js"></script>
-
 </body>
 </html>
