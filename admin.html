@@ -307,6 +307,20 @@
   let allChats = [];
   let activeUser = null;
 
+  // ✅ 12-hour AM/PM format function
+  function formatTime(raw) {
+    const date = new Date(raw);
+    if (isNaN(date)) return raw;
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  }
+
   function loadData() {
     document.getElementById("main").innerHTML = `<div class="loading">⏳ Loading chats...</div>`;
 
@@ -398,7 +412,7 @@
       <div class="chat-messages" id="chatMessages">
         ${chats.slice().reverse().map(chat => `
           <div class="msg-row">
-            <div class="msg-time">${chat.created_at || ""}</div>
+            <div class="msg-time">${chat.created_at ? formatTime(chat.created_at) : ""}</div>
             <div class="msg-label right">👤 ${username}</div>
             <div class="msg-user-bubble">${chat.user_message}</div>
             <div class="msg-label">🤖 Hurairah AI</div>
