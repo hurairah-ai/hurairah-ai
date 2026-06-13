@@ -524,3 +524,70 @@ textarea::placeholder { color: #64748b; }
   .logo-wrap { width: 140px; height: 140px; }
   .message { max-width: 88%; font-size: 14px; }
 }
+.bot-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.bot-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.bot-name {
+  font-size: 12px;
+  color: #a78bfa;
+  font-weight: 600;
+}
+
+.cursor {
+  display: inline-block;
+  width: 2px;
+  height: 16px;
+  background: #a78bfa;
+  margin-left: 2px;
+  vertical-align: middle;
+  animation: blink 0.7s infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.time {
+  font-size: 11px;
+  color: rgba(255,255,255,0.3);
+  margin-top: 6px;
+}
+
+.thinking-text {
+  font-size: 13px;
+  color: #a78bfa;
+  margin-left: 4px;
+}
+
+.speak-btn {
+  margin-top: 8px;
+  padding: 6px 14px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  background: rgba(124,58,237,0.2);
+  border: 1px solid rgba(124,58,237,0.3);
+  color: #a78bfa;
+  font-size: 13px;
+  transition: all 0.2s;
+  display: block;
+}
+
+.speak-btn:active { background: rgba(124,58,237,0.4); }
