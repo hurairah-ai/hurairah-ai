@@ -46,6 +46,11 @@ const recordingPopup = document.getElementById("recordingPopup");
 
 let selectedImage = null;
 
+function getTime() {
+  const now = new Date();
+  return now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+}
+
 function removeWelcomeScreen() {
   const welcome = document.querySelector(".welcome-screen");
   if (welcome) {
@@ -57,43 +62,61 @@ function removeWelcomeScreen() {
 function addMessage(text, type, animate = false) {
   const msg = document.createElement("div");
   msg.className = `message ${type}`;
-  msg.style.opacity = "0";
-  msg.style.transform = type === "user" ? "translateX(20px)" : "translateX(-20px)";
 
   if (type === "bot") {
-    msg.innerHTML = `<div class="msg-text"></div><button class="speak-btn">🔊</button>`;
+    msg.innerHTML = `
+      <div class="bot-header">
+        <div class="bot-avatar">✨</div>
+        <div class="bot-name">Hurairah AI</div>
+      </div>
+      <div class="msg-text"></div>
+      <button class="speak-btn" style="display:none">🔊 Suno</button>
+      <div class="time">${getTime()}</div>
+    `;
   } else {
-    msg.innerHTML = `<div class="msg-text">${text}</div>`;
+    msg.innerHTML = `
+      <div class="msg-text">${text}</div>
+      <div class="time">${getTime()}</div>
+    `;
   }
 
   chatBox.appendChild(msg);
-
-  requestAnimationFrame(() => {
-    msg.style.transition = "all 0.3s ease";
-    msg.style.opacity = "1";
-    msg.style.transform = "translateX(0)";
-  });
+  chatBox.scrollTop = chatBox.scrollHeight;
 
   const textEl = msg.querySelector(".msg-text");
 
   if (type === "bot" && animate) {
+    const speakBtn = msg.querySelector(".speak-btn");
+
+    // cursor add karo
+    const cursor = document.createElement("span");
+    cursor.className = "cursor";
+    textEl.appendChild(cursor);
+
     let i = 0;
-    const speed = 15;
-    function typeChar() {
-      if (i <= text.length) {
-        textEl.textContent = text.slice(0, i);
+    const interval = setInterval(() => {
+      if (i < text.length) {
+        cursor.insertAdjacentText("beforebegin", text[i]);
         i++;
         chatBox.scrollTop = chatBox.scrollHeight;
-        setTimeout(typeChar, speed);
+      } else {
+        clearInterval(interval);
+        cursor.remove();
+        speakBtn.style.display = "inline-block";
+        speakBtn.addEventListener("click", () => {
+          const speech = new SpeechSynthesisUtterance(text);
+          speech.lang = "en-IN";
+          speech.rate = 1;
+          speechSynthesis.speak(speech);
+        });
       }
-    }
-    typeChar();
-  } else {
-    textEl.textContent = text;
-  }
+    }, 22);
 
-  if (type === "bot") {
-    msg.querySelector(".speak-btn").addEventListener("click", () => {
+  } else if (type === "bot") {
+    textEl.textContent = text;
+    const speakBtn = msg.querySelector(".speak-btn");
+    speakBtn.style.display = "inline-block";
+    speakBtn.addEventListener("click", () => {
       const speech = new SpeechSynthesisUtterance(text);
       speech.lang = "en-IN";
       speech.rate = 1;
@@ -110,7 +133,12 @@ function showThinking() {
   const thinking = document.createElement("div");
   thinking.className = "thinking";
   thinking.id = "thinking";
-  thinking.innerHTML = `<div class="dot"></div><div class="dot"></div><div class="dot"></div>`;
+  thinking.innerHTML = `
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <span class="thinking-text">Hurairah AI likh raha hai...</span>
+  `;
   chatBox.appendChild(thinking);
   chatBox.scrollTop = chatBox.scrollHeight;
 }
