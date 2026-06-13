@@ -1,4 +1,4 @@
-Const API_URL = "https://hurairah-ai.annu8857818.workers.dev";
+const API_URL = "https://hurairah-ai.annu8857818.workers.dev";
 const ELEVENLABS_API_KEY = "sk_ba5c973ec598f00b7293cc1f37675eb24f52363489ea82be";
 const ELEVENLABS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
 
