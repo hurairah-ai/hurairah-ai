@@ -4,6 +4,14 @@ let username = localStorage.getItem("hurairah_username");
 
 if (username) {
   document.getElementById("nameModal").style.display = "none";
+const API_URL = "https://hurairah-ai.annu8857818.workers.dev";
+const ELEVENLABS_API_KEY = "sk_ba5c973ec598f00b7293cc1f37675eb24f52363489ea82be";
+const ELEVENLABS_VOICE_ID = "4wf10lgibMnboGJGCLrP";
+
+let username = localStorage.getItem("hurairah_username");
+
+if (username) {
+  document.getElementById("nameModal").style.display = "none";
 } else {
   document.getElementById("nameModal").style.display = "flex";
 }
@@ -59,6 +67,55 @@ function removeWelcomeScreen() {
   }
 }
 
+async function speakWithElevenLabs(text, btn) {
+  try {
+    btn.textContent = "⏳ Loading...";
+    btn.disabled = true;
+
+    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
+      method: "POST",
+      headers: {
+        "xi-api-key": ELEVENLABS_API_KEY,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        text: text,
+        model_id: "eleven_multilingual_v2",
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.8,
+          style: 0.3,
+          use_speaker_boost: true
+        }
+      })
+    });
+
+    if (!res.ok) throw new Error("ElevenLabs error");
+
+    const blob = await res.blob();
+    const audioUrl = URL.createObjectURL(blob);
+    const audio = new Audio(audioUrl);
+    
+    btn.textContent = "🔊 Suno";
+    btn.disabled = false;
+
+    audio.play();
+
+    audio.onended = () => {
+      URL.revokeObjectURL(audioUrl);
+    };
+
+  } catch (err) {
+    // Fallback to browser voice
+    btn.textContent = "🔊 Suno";
+    btn.disabled = false;
+    const speech = new SpeechSynthesisUtterance(text);
+    speech.lang = "en-IN";
+    speech.rate = 1;
+    speechSynthesis.speak(speech);
+  }
+}
+
 function addMessage(text, type, animate = false) {
   const msg = document.createElement("div");
   msg.className = `message ${type}`;
@@ -87,8 +144,6 @@ function addMessage(text, type, animate = false) {
 
   if (type === "bot" && animate) {
     const speakBtn = msg.querySelector(".speak-btn");
-
-    // cursor add karo
     const cursor = document.createElement("span");
     cursor.className = "cursor";
     textEl.appendChild(cursor);
@@ -104,10 +159,7 @@ function addMessage(text, type, animate = false) {
         cursor.remove();
         speakBtn.style.display = "inline-block";
         speakBtn.addEventListener("click", () => {
-          const speech = new SpeechSynthesisUtterance(text);
-          speech.lang = "en-IN";
-          speech.rate = 1;
-          speechSynthesis.speak(speech);
+          speakWithElevenLabs(text, speakBtn);
         });
       }
     }, 22);
@@ -117,10 +169,7 @@ function addMessage(text, type, animate = false) {
     const speakBtn = msg.querySelector(".speak-btn");
     speakBtn.style.display = "inline-block";
     speakBtn.addEventListener("click", () => {
-      const speech = new SpeechSynthesisUtterance(text);
-      speech.lang = "en-IN";
-      speech.rate = 1;
-      speechSynthesis.speak(speech);
+      speakWithElevenLabs(text, speakBtn);
     });
   }
 
