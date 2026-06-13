@@ -31,27 +31,21 @@
       font-size: 18px;
     }
   </style>
-
-  <script>
-    const pass = prompt("Admin Password:");
-    if (pass !== "Hurairah786") {
-      document.write(`
-        <h1 style="color:red;text-align:center;margin-top:100px;font-size:50px;">
-          Access Denied
-        </h1>
-      `);
-    } else {
-      window.ADMIN_ACCESS = true;
-    }
-  </script>
 </head>
 
 <body>
   <div id="adminPanel"></div>
 
   <script>
-    if (window.ADMIN_ACCESS) {
+    const pass = prompt("Admin Password:");
 
+    if (pass !== "Hurairah786") {
+      document.getElementById("adminPanel").innerHTML = `
+        <h1 style="color:red;text-align:center;margin-top:100px;font-size:50px;">
+          ❌ Access Denied
+        </h1>
+      `;
+    } else {
       document.getElementById("adminPanel").innerHTML = `
         <h1>Hurairah AI Admin Panel</h1>
         <table id="chatTable">
@@ -72,8 +66,8 @@
       })
       .then(r => {
         if (!r.ok) {
-          document.body.innerHTML =
-            "<h1 style='color:red;text-align:center;margin-top:100px'>Access Denied</h1>";
+          document.getElementById("adminPanel").innerHTML =
+            "<h1 style='color:red;text-align:center;margin-top:100px'>❌ Access Denied</h1>";
           throw new Error("Access Denied");
         }
         return r.json();
@@ -95,7 +89,6 @@
         const errEl = document.getElementById("error");
         if (errEl) errEl.textContent = "Error: " + err.message;
       });
-
     }
   </script>
 </body>
