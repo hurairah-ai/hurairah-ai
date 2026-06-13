@@ -155,15 +155,8 @@
       font-weight: 700;
     }
 
-    .chat-header-name {
-      font-size: 16px;
-      font-weight: 600;
-    }
-
-    .chat-header-msgs {
-      font-size: 12px;
-      color: #94a3b8;
-    }
+    .chat-header-name { font-size: 16px; font-weight: 600; }
+    .chat-header-msgs { font-size: 12px; color: #94a3b8; }
 
     .chat-messages {
       flex: 1;
@@ -177,17 +170,9 @@
     .chat-messages::-webkit-scrollbar { width: 3px; }
     .chat-messages::-webkit-scrollbar-thumb { background: rgba(124,58,237,0.4); border-radius: 10px; }
 
-    .msg-row {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
+    .msg-row { display: flex; flex-direction: column; gap: 6px; }
 
-    .msg-time {
-      font-size: 11px;
-      color: #64748b;
-      text-align: center;
-    }
+    .msg-time { font-size: 11px; color: #64748b; text-align: center; }
 
     .msg-user-bubble {
       align-self: flex-end;
@@ -213,12 +198,7 @@
       color: #e2e8f0;
     }
 
-    .msg-label {
-      font-size: 11px;
-      color: #94a3b8;
-      margin-bottom: 2px;
-    }
-
+    .msg-label { font-size: 11px; color: #94a3b8; margin-bottom: 2px; }
     .msg-label.right { text-align: right; }
 
     .empty-state {
@@ -281,7 +261,6 @@
 <body>
 
 <div class="header">✨ Hurairah AI — Admin Panel</div>
-
 <div class="main" id="main">
   <div class="loading">Loading...</div>
 </div>
@@ -299,14 +278,13 @@
   let allChats = [];
   let activeUser = null;
 
-  // ✅ FIXED: "Z" add kiya taaki UTC treat ho, IST mein convert ho
+  // ✅ FIXED: No timezone conversion, browser local time use karega
   function formatTime(raw) {
     if (!raw) return "";
-    const fixed = raw.includes("T") ? raw : raw.replace(" ", "T") + "Z";
+    const fixed = raw.includes("T") ? raw : raw.replace(" ", "T");
     const date = new Date(fixed);
     if (isNaN(date)) return raw;
     return date.toLocaleString('en-IN', {
-      timeZone: 'Asia/Kolkata',
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -318,7 +296,6 @@
 
   function loadData() {
     document.getElementById("main").innerHTML = `<div class="loading">⏳ Loading chats...</div>`;
-
     fetch(API + "/admin", {
       headers: { "x-admin-password": pass }
     })
