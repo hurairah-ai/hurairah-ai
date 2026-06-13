@@ -41,15 +41,23 @@ background:#111827;
 </head>
 <body>
 
-
 <script>
 const pass = prompt("Admin Password");
 
 if(pass !== "Hurairah786"){
-document.body.innerHTML = `
-<h1 style="color:red;text-align:center;margin-top:100px">
+
+document.write(`
+<h1 style="
+color:red;
+text-align:center;
+margin-top:100px;
+font-size:50px;">
 Access Denied
-</h1>`;
+</h1>
+`);
+
+throw new Error("Access Denied");
+
 }
 </script>
 
