@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Hurairah AI Admin</title>
   <style>
@@ -19,7 +19,6 @@
       flex-direction: column;
     }
 
-    /* HEADER */
     .header {
       background: linear-gradient(135deg, #7c3aed, #4f46e5);
       padding: 16px 20px;
@@ -29,14 +28,12 @@
       letter-spacing: 1px;
     }
 
-    /* MAIN LAYOUT */
     .main {
       display: flex;
       flex: 1;
       overflow: hidden;
     }
 
-    /* LEFT - USER LIST */
     .user-list {
       width: 280px;
       min-width: 280px;
@@ -130,7 +127,6 @@
 
     .delete-btn:hover { background: rgba(239,68,68,0.4); }
 
-    /* RIGHT - CHAT VIEW */
     .chat-view {
       flex: 1;
       display: flex;
@@ -225,7 +221,6 @@
 
     .msg-label.right { text-align: right; }
 
-    /* EMPTY STATE */
     .empty-state {
       flex: 1;
       display: flex;
@@ -239,7 +234,6 @@
     .empty-state span { font-size: 48px; }
     .empty-state p { font-size: 16px; }
 
-    /* ACCESS DENIED */
     .denied {
       flex: 1;
       display: flex;
@@ -249,7 +243,6 @@
       color: #ef4444;
     }
 
-    /* MOBILE */
     @media(max-width: 600px) {
       .user-list { width: 100%; min-width: unset; }
       .chat-view { display: none; }
@@ -275,7 +268,6 @@
 
     .back-btn { display: none; }
 
-    /* LOADING */
     .loading {
       flex: 1;
       display: flex;
@@ -307,11 +299,13 @@
   let allChats = [];
   let activeUser = null;
 
-  // ✅ 12-hour AM/PM format — India IST timezone
+  // ✅ FIXED: "Z" add kiya taaki UTC treat ho, IST mein convert ho
   function formatTime(raw) {
-    const date = new Date(raw);
+    if (!raw) return "";
+    const fixed = raw.includes("T") ? raw : raw.replace(" ", "T") + "Z";
+    const date = new Date(fixed);
     if (isNaN(date)) return raw;
-    return date.toLocaleString('en-US', {
+    return date.toLocaleString('en-IN', {
       timeZone: 'Asia/Kolkata',
       year: 'numeric',
       month: 'short',
@@ -339,7 +333,6 @@
   }
 
   function renderPanel() {
-    // Group by username
     const grouped = {};
     allChats.forEach(chat => {
       if (!grouped[chat.username]) grouped[chat.username] = [];
@@ -384,7 +377,6 @@
   function showChat(username) {
     activeUser = username;
 
-    // Active card highlight
     document.querySelectorAll(".user-card").forEach(c => c.classList.remove("active"));
     const card = document.getElementById("card-" + username);
     if (card) card.classList.add("active");
@@ -423,7 +415,6 @@
       </div>
     `;
 
-    // Scroll to bottom
     const msgs = document.getElementById("chatMessages");
     if (msgs) msgs.scrollTop = msgs.scrollHeight;
   }
