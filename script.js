@@ -54,52 +54,18 @@ function removeWelcomeScreen() {
   }
 }
 
-// Image preview input ke upar
-function createImagePreview(dataUrl, fileName) {
-  removeImagePreview();
-  const preview = document.createElement("div");
-  preview.id = "imagePreview";
-  preview.innerHTML = `
-    <div class="preview-inner">
-      <img src="${dataUrl}" alt="preview">
-      <button class="preview-remove" id="removePreviewBtn">✕</button>
-    </div>
-    <span class="preview-name">${fileName}</span>
-  `;
-  const inputArea = document.querySelector(".input-area");
-  inputArea.parentNode.insertBefore(preview, inputArea);
-  document.getElementById("removePreviewBtn").addEventListener("click", () => {
-    removeImagePreview();
-    selectedImage = null;
-    imageInput.value = "";
-  });
-}
-
-function removeImagePreview() {
-  const existing = document.getElementById("imagePreview");
-  if (existing) existing.remove();
-}
-
-// Chat bubble mein image + text
-function addMessage(text, type, imageData = null) {
+function addMessage(text, type, animate = false) {
   const msg = document.createElement("div");
   msg.className = `message ${type}`;
   msg.style.opacity = "0";
   msg.style.transform = type === "user" ? "translateX(20px)" : "translateX(-20px)";
 
-  let content = "";
-
-  if (imageData && type === "user") {
-    content += `<img class="msg-image" src="${imageData}" alt="uploaded">`;
-  }
-
   if (type === "bot") {
-    content += `<div class="msg-text">${text}</div><button class="speak-btn">🔊</button>`;
+    msg.innerHTML = `<div class="msg-text"></div><button class="speak-btn">🔊</button>`;
   } else {
-    content += `<div class="msg-text">${text}</div>`;
+    msg.innerHTML = `<div class="msg-text">${text}</div>`;
   }
 
-  msg.innerHTML = content;
   chatBox.appendChild(msg);
 
   requestAnimationFrame(() => {
@@ -107,6 +73,24 @@ function addMessage(text, type, imageData = null) {
     msg.style.opacity = "1";
     msg.style.transform = "translateX(0)";
   });
+
+  const textEl = msg.querySelector(".msg-text");
+
+  if (type === "bot" && animate) {
+    let i = 0;
+    const speed = 15;
+    function typeChar() {
+      if (i <= text.length) {
+        textEl.textContent = text.slice(0, i);
+        i++;
+        chatBox.scrollTop = chatBox.scrollHeight;
+        setTimeout(typeChar, speed);
+      }
+    }
+    typeChar();
+  } else {
+    textEl.textContent = text;
+  }
 
   if (type === "bot") {
     msg.querySelector(".speak-btn").addEventListener("click", () => {
@@ -146,15 +130,10 @@ async function sendMessage() {
   }
 
   removeWelcomeScreen();
-  addMessage(text || "", "user", selectedImage);
-  removeImagePreview();
+  if (text) addMessage(text, "user");
   input.value = "";
   input.style.height = "24px";
   showThinking();
-
-  const imageToSend = selectedImage;
-  selectedImage = null;
-  imageInput.value = "";
 
   try {
     const res = await fetch(API_URL, {
@@ -162,17 +141,18 @@ async function sendMessage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         username,
-        message: text || "Is image mein kya hai?",
-        image: imageToSend,
+        message: text,
+        image: selectedImage,
         hurairahMode
       })
     });
     const data = await res.json();
     removeThinking();
-    addMessage(data.reply || "Koi response nahi mila", "bot");
+    addMessage(data.reply || "Koi response nahi mila", "bot", true);
+    selectedImage = null;
   } catch (err) {
     removeThinking();
-    addMessage("Error: " + err.message, "bot");
+    addMessage("Error: " + err.message, "bot", true);
   }
 }
 
@@ -220,7 +200,7 @@ imageInput.addEventListener("change", () => {
   const reader = new FileReader();
   reader.onload = () => {
     selectedImage = reader.result;
-    createImagePreview(reader.result, file.name);
+    addMessage("📷 Image: " + file.name, "user");
   };
   reader.readAsDataURL(file);
 });
