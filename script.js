@@ -36,7 +36,9 @@ function chipClick(text) {
 }
 
 let messages = JSON.parse(localStorage.getItem("hurairah_chat") || "[]");
-let hurairahMode = localStorage.getItem("hurairah_mode") === "true";
+
+// ✅ FIXED: sessionStorage use kiya - website band hote hi off ho jayega
+let hurairahMode = sessionStorage.getItem("hurairah_mode") === "true";
 
 const chatBox = document.getElementById("chatBox");
 const input = document.getElementById("messageInput");
@@ -48,7 +50,7 @@ const recordingPopup = document.getElementById("recordingPopup");
 
 let selectedImage = null;
 
-// ✅ FIXED: 12-hour AM/PM format
+// ✅ 12-hour AM/PM format
 function getTime() {
   const now = new Date();
   return now.toLocaleTimeString('en-IN', {
@@ -196,9 +198,10 @@ async function sendMessage() {
   const text = input.value.trim();
   if (!text && !selectedImage) return;
 
+  // ✅ FIXED: sessionStorage use kiya
   if (text.toLowerCase() === "mehajabeen pgl hu") {
     hurairahMode = true;
-    localStorage.setItem("hurairah_mode", "true");
+    sessionStorage.setItem("hurairah_mode", "true");
   }
 
   removeWelcomeScreen();
@@ -280,6 +283,7 @@ imageInput.addEventListener("change", () => {
 document.getElementById("clearBtn").addEventListener("click", () => {
   if (confirm("Chat delete karna chahte ho?")) {
     localStorage.removeItem("hurairah_chat");
+    sessionStorage.removeItem("hurairah_mode");
     messages = [];
     location.reload();
   }
