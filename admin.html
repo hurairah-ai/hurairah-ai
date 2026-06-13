@@ -41,7 +41,20 @@ background:#111827;
 </head>
 <body>
 
+
+<script>
+const pass = prompt("Admin Password");
+
+if(pass !== "Hurairah786"){
+document.body.innerHTML = `
+<h1 style="color:red;text-align:center;margin-top:100px">
+Access Denied
+</h1>`;
+}
+</script>
+
 <h1>Hurairah AI Admin Panel</h1>
+
 
 <table id="chatTable">
 
