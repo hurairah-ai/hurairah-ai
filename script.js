@@ -57,100 +57,101 @@ function getTime() {
   });
 }
 
-// ✅ Code highlighting + copy + run button
-function formatMessage(text) {
-  text = text.replace(/```(\w+)?\n?([\s\S]*?)```/g, (match, lang, code) => {
-    const language = lang || 'javascript';
-    const escapedCode = code.trim()
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-
-    // ✅ FIXED: code, js, javascript, html sab pe Run button
-    const isRunnable = ['javascript', 'js', 'html', 'code'].includes(language.toLowerCase());
-    const runBtn = isRunnable
-      ? `<button class="run-btn" onclick="runCode(this)">▶ Run</button>`
-      : '';
-
-    return `<pre><div class="code-header"><span class="code-lang">${language}</span><div style="display:flex;gap:6px;">${runBtn}<button class="copy-btn" onclick="copyCode(this)">📋 Copy</button></div></div><code>${escapedCode}</code></pre>`;
-  });
-
-  text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
-  text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
-  text = text.replace(/\n/g, '<br>');
-  return text;
-}
-
-function copyCode(btn) {
-  const code = btn.closest('pre').querySelector('code').innerText;
-  navigator.clipboard.writeText(code).then(() => {
-    btn.textContent = '✅ Copied!';
-    btn.classList.add('copied');
-    setTimeout(() => {
-      btn.textContent = '📋 Copy';
-      btn.classList.remove('copied');
-    }, 2000);
+// ✅ NEW: Date/Time ko AI se mat puchwao, seedha device se nikalo (100% sahi rahega)
+function getCurrentDate() {
+  const now = new Date();
+  return now.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
   });
 }
 
-// ✅ Run button function
-function runCode(btn) {
-  const pre = btn.closest('pre');
-  const lang = pre.querySelector('.code-lang').textContent.toLowerCase();
-  const code = pre.querySelector('code').innerText;
+function getDirectDateTimeReply(text) {
+  const msg = text.toLowerCase().trim();
 
-  const oldOutput = pre.nextElementSibling;
-  if (oldOutput && oldOutput.classList.contains('code-output')) {
-    oldOutput.remove();
+  const dateKeywords = ["date", "tarikh", "tareekh", "aaj ki date", "today's date", "todays date"];
+  const timeKeywords = ["time", "samay", "kitne baje", "kitna baj", "current time", "ajka time", "abhi kya time"];
+
+  const isDateQuery = dateKeywords.some(k => msg.includes(k));
+  const isTimeQuery = timeKeywords.some(k => msg.includes(k));
+
+  if (isDateQuery && isTimeQuery) {
+    return `Aaj ki date ${getCurrentDate()} hai aur abhi ka time ${getTime()} hai.`;
   }
+  if (isDateQuery) {
+    return `Aaj ki date ${getCurrentDate()} hai.`;
+  }
+  if (isTimeQuery) {
+    return `Abhi ka time ${getTime()} hai.`;
+  }
+  return null;
+}
 
-  const output = document.createElement('div');
-  output.className = 'code-output';
+// ✅ NEW: Live Weather - free Open-Meteo API (no key needed), AI guess nahi karega
+function isWeatherQuery(text) {
+  const msg = text.toLowerCase();
+  const weatherKeywords = ["weather", "mausam", "temperature", "tapman", "baarish", "barish"];
+  return weatherKeywords.some(k => msg.includes(k));
+}
 
-  // ✅ FIX: agar code "<" se start ho raha hai, to use HTML treat karo
-  // chahe label "html" ho ya na ho (AI kabhi-kabhi ```javascript likh deta hai
-  // jab content actually HTML hota hai, jisse eval() error deta tha)
-  const trimmedCode = code.trim();
-  const looksLikeHTML = lang === 'html' || trimmedCode.startsWith('<');
+function extractCityName(text) {
+  const cleaned = text.replace(/[?.!]/g, "");
+  const patterns = [
+    /weather\s+(?:in|of|for)\s+([a-zA-Z\s]+)/i,
+    /([a-zA-Z\s]+?)\s+(?:ka|ki|ke)\s+(?:weather|mausam|temperature|tapman)/i,
+    /([a-zA-Z\s]+?)\s+mein\s+(?:weather|mausam)/i,
+    /([a-zA-Z\s]+?)\s+(?:weather|mausam)/i
+  ];
+  const STOPWORDS = ["today", "now", "abhi", "aaj", "kaisa", "kaisi", "hai", "please", "batao", "kya", "ka", "ki", "ke", "mein", "me", "mausam", "weather", "temperature", "tapman", "is", "the", "whats", "what", "tell", "current"];
 
-  if (looksLikeHTML) {
-    const escaped = code.replace(/"/g, '&quot;');
-    output.innerHTML = `
-      <div class="output-header">🌐 HTML Preview</div>
-      <iframe srcdoc="${escaped}" style="width:100%;height:200px;border:none;background:white;"></iframe>
-    `;
-  } else {
-    output.innerHTML = `<div class="output-header">⚡ Output</div><div class="output-text"></div>`;
-    const outputText = output.querySelector('.output-text');
-
-    const logs = [];
-    const originalLog = console.log;
-    console.log = (...args) => {
-      logs.push(args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)).join(' '));
-      originalLog(...args);
-    };
-
-    try {
-      const result = eval(code);
-      console.log = originalLog;
-
-      if (logs.length > 0) {
-        outputText.textContent = logs.join('\n');
-      } else if (result !== undefined) {
-        outputText.textContent = String(result);
-      } else {
-        outputText.textContent = '✅ Code ran successfully (no output)';
-      }
-    } catch (err) {
-      console.log = originalLog;
-      outputText.textContent = '❌ Error: ' + err.message;
-      outputText.style.color = '#f38ba8';
+  for (const pattern of patterns) {
+    const match = cleaned.match(pattern);
+    if (match && match[1]) {
+      let words = match[1].trim().split(/\s+/);
+      while (words.length > 0 && STOPWORDS.includes(words[words.length - 1].toLowerCase())) words.pop();
+      while (words.length > 0 && STOPWORDS.includes(words[0].toLowerCase())) words.shift();
+      const city = words.join(" ");
+      if (city.length > 1) return city;
     }
   }
+  return null;
+}
 
-  pre.insertAdjacentElement('afterend', output);
-  output.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+function getWeatherDescription(code) {
+  const map = {
+    0: "saaf aasman ☀️", 1: "mostly saaf ☀️", 2: "halka badal ⛅", 3: "badal ☁️",
+    45: "kohra 🌫️", 48: "kohra 🌫️",
+    51: "halki baarish 🌦️", 53: "baarish 🌦️", 55: "tez baarish 🌧️",
+    61: "halki baarish 🌧️", 63: "baarish 🌧️", 65: "tez baarish 🌧️",
+    71: "halki barfbaari ❄️", 73: "barfbaari ❄️", 75: "tez barfbaari ❄️",
+    80: "halki shower 🌦️", 81: "shower 🌧️", 82: "tez shower ⛈️",
+    95: "toofan ⛈️", 96: "toofan with hail ⛈️", 99: "tez toofan with hail ⛈️"
+  };
+  return map[code] || "mixed weather 🌥️";
+}
+
+async function getDirectWeatherReply(text) {
+  const city = extractCityName(text);
+  if (!city) {
+    return "Kis shehar ka weather batau? Jaise likho: 'Delhi ka weather' ya 'weather in Mumbai'.";
+  }
+  try {
+    const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`);
+    const geoData = await geoRes.json();
+    if (!geoData.results || geoData.results.length === 0) {
+      return `Mujhe "${city}" naam ka shehar nahi mila. Sahi spelling check karo.`;
+    }
+    const place = geoData.results[0];
+    const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current_weather=true`);
+    const weatherData = await weatherRes.json();
+    const cw = weatherData.current_weather;
+    const desc = getWeatherDescription(cw.weathercode);
+    const placeName = place.country ? `${place.name}, ${place.country}` : place.name;
+    return `${placeName} mein abhi temperature ${cw.temperature}°C hai aur ${desc} hai. Wind speed ${cw.windspeed} km/h hai.`;
+  } catch (err) {
+    return "Weather fetch karne mein problem aa gayi. Thodi der baad try karo.";
+  }
 }
 
 function removeWelcomeScreen() {
@@ -221,9 +222,10 @@ function addMessage(text, type, animate = false, imageData = null) {
       <div class="time">${getTime()}</div>
     `;
   } else {
+    // ✅ FIXED: Image preview chatbox mein dikhao
     let imageHTML = "";
     if (imageData) {
-      imageHTML = `<img src="${imageData}" class="msg-image" />`;
+      imageHTML = `<img src="${imageData}" style="max-width:200px; max-height:200px; border-radius:12px; display:block; margin-bottom:6px;" />`;
     }
     msg.innerHTML = `
       ${imageHTML}
@@ -241,7 +243,7 @@ function addMessage(text, type, animate = false, imageData = null) {
     const speakBtn = msg.querySelector(".speak-btn");
     const cursor = document.createElement("span");
     cursor.className = "cursor";
-    if (textEl) textEl.appendChild(cursor);
+    textEl.appendChild(cursor);
 
     let i = 0;
     const interval = setInterval(() => {
@@ -252,7 +254,6 @@ function addMessage(text, type, animate = false, imageData = null) {
       } else {
         clearInterval(interval);
         cursor.remove();
-        if (textEl) textEl.innerHTML = formatMessage(text);
         speakBtn.style.display = "inline-block";
         speakBtn.addEventListener("click", () => {
           speakWithElevenLabs(text, speakBtn);
@@ -261,7 +262,7 @@ function addMessage(text, type, animate = false, imageData = null) {
     }, 22);
 
   } else if (type === "bot") {
-    if (textEl) textEl.innerHTML = formatMessage(text);
+    if (textEl) textEl.textContent = text;
     const speakBtn = msg.querySelector(".speak-btn");
     speakBtn.style.display = "inline-block";
     speakBtn.addEventListener("click", () => {
@@ -274,30 +275,40 @@ function addMessage(text, type, animate = false, imageData = null) {
   localStorage.setItem("hurairah_chat", JSON.stringify(messages));
 }
 
+// ✅ FIXED: Image preview input area mein dikhao
 function showImagePreview(imageData, fileName) {
+  // Pehle purana preview hatao
   removeImagePreview();
 
   const preview = document.createElement("div");
   preview.id = "imagePreview";
+  preview.style.cssText = `
+    position: relative;
+    display: inline-block;
+    margin: 8px 12px;
+    border-radius: 12px;
+    overflow: hidden;
+  `;
   preview.innerHTML = `
-    <div class="preview-inner">
-      <img src="${imageData}" />
-      <button class="preview-remove" onclick="removeImagePreview()">✕</button>
-    </div>
-    <span class="preview-name">📷 ${fileName}</span>
+    <img src="${imageData}" style="max-width:120px; max-height:120px; border-radius:12px; display:block;" />
+    <button onclick="removeImagePreview()" style="
+      position:absolute; top:4px; right:4px;
+      background:rgba(0,0,0,0.6); border:none;
+      color:white; border-radius:50%;
+      width:22px; height:22px;
+      font-size:12px; cursor:pointer;
+      display:flex; align-items:center; justify-content:center;
+    ">✕</button>
   `;
 
   const inputArea = document.querySelector(".input-area");
   inputArea.parentNode.insertBefore(preview, inputArea);
+  chatBox.scrollTop = chatBox.scrollHeight;
 }
 
 function removeImagePreview() {
   const preview = document.getElementById("imagePreview");
-  if (preview) {
-    preview.remove();
-    selectedImage = null;
-    imageInput.value = "";
-  }
+  if (preview) preview.remove();
 }
 
 function showThinking() {
@@ -329,10 +340,30 @@ async function sendMessage() {
   }
 
   removeWelcomeScreen();
+  // ✅ FIXED: Image preview chatbox mein dikhao aur input preview hatao
   addMessage(text, "user", false, selectedImage);
   removeImagePreview();
   input.value = "";
   input.style.height = "24px";
+
+  // ✅ NEW: Agar date/time pucha hai, AI ko call hi mat karo - seedha sahi jawab do
+  if (!selectedImage) {
+    const directReply = getDirectDateTimeReply(text);
+    if (directReply) {
+      addMessage(directReply, "bot", true);
+      return;
+    }
+
+    // ✅ NEW: Live weather - real data, AI guess nahi karega
+    if (isWeatherQuery(text)) {
+      showThinking();
+      const weatherReply = await getDirectWeatherReply(text);
+      removeThinking();
+      addMessage(weatherReply, "bot", true);
+      return;
+    }
+  }
+
   showThinking();
 
   try {
@@ -395,6 +426,7 @@ if (SpeechRecognition && micBtn) {
 
 attachBtn.addEventListener("click", () => imageInput.click());
 
+// ✅ FIXED: Image select hone pe preview dikhao, direct send mat karo
 imageInput.addEventListener("change", () => {
   const file = imageInput.files[0];
   if (!file) return;
@@ -414,3 +446,244 @@ document.getElementById("clearBtn").addEventListener("click", () => {
     location.reload();
   }
 });
+
+// =========================================================
+// ✅ NEW: Voice Chat Mode - hands-free continuous conversation
+// Bolo -> AI sune -> reply de -> bole -> phir se sune... (loop)
+// =========================================================
+let voiceModeActive = false;
+let voiceRecognitionInstance = null;
+
+function injectVoiceModeStyles() {
+  const style = document.createElement("style");
+  style.textContent = `
+    .voice-mode-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: inherit;
+      flex-shrink: 0;
+    }
+    .voice-mode-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: linear-gradient(135deg, #1a0a2e, #0a0a14);
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 22px;
+    }
+    .voice-orb {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #7c3aed, #4f6cf7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 56px;
+      box-shadow: 0 0 60px rgba(124, 58, 237, 0.6);
+      animation: hurairah-pulse 2s infinite ease-in-out;
+    }
+    .voice-orb.thinking { animation: hurairah-spin 1.4s linear infinite; }
+    .voice-orb.speaking { animation: hurairah-pulse 0.6s infinite ease-in-out; }
+    @keyframes hurairah-pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.12); }
+    }
+    @keyframes hurairah-spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .voice-status {
+      color: #ece9f7;
+      font-size: 18px;
+      font-weight: 600;
+      text-align: center;
+      padding: 0 24px;
+    }
+    .voice-transcript {
+      color: #9590b3;
+      font-size: 14px;
+      text-align: center;
+      padding: 0 32px;
+      min-height: 20px;
+    }
+    .voice-exit-btn {
+      margin-top: 10px;
+      padding: 12px 28px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.08);
+      color: #ece9f7;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function createVoiceModeUI() {
+  if (!SpeechRecognition) return; // browser support nahi hai to button hi mat dikhao
+
+  injectVoiceModeStyles();
+
+  // Voice mode toggle button - input area mein add karo
+  const btn = document.createElement("button");
+  btn.id = "voiceModeBtn";
+  btn.className = "voice-mode-btn";
+  btn.title = "Voice Chat Mode";
+  btn.innerHTML = "🎧";
+  document.querySelector(".input-area").appendChild(btn);
+
+  // Full-screen overlay (call jaisa interface)
+  const overlay = document.createElement("div");
+  overlay.id = "voiceModeOverlay";
+  overlay.className = "voice-mode-overlay";
+  overlay.innerHTML = `
+    <div class="voice-orb" id="voiceOrb">🎙️</div>
+    <div class="voice-status" id="voiceStatus">Sun rahi hu...</div>
+    <div class="voice-transcript" id="voiceTranscript"></div>
+    <button class="voice-exit-btn" id="voiceExitBtn">✕ Voice Mode Band Karo</button>
+  `;
+  document.body.appendChild(overlay);
+
+  btn.addEventListener("click", startVoiceMode);
+  document.getElementById("voiceExitBtn").addEventListener("click", stopVoiceMode);
+}
+
+function setVoiceStatus(state, label, transcript = "") {
+  const orb = document.getElementById("voiceOrb");
+  const status = document.getElementById("voiceStatus");
+  const transcriptEl = document.getElementById("voiceTranscript");
+  orb.className = "voice-orb " + state;
+  orb.textContent = state === "thinking" ? "✨" : state === "speaking" ? "🔊" : "🎙️";
+  status.textContent = label;
+  transcriptEl.textContent = transcript;
+}
+
+function startVoiceMode() {
+  voiceModeActive = true;
+  document.getElementById("voiceModeOverlay").style.display = "flex";
+  listenForVoiceInput();
+}
+
+function stopVoiceMode() {
+  voiceModeActive = false;
+  if (voiceRecognitionInstance) {
+    try { voiceRecognitionInstance.abort(); } catch (e) {}
+  }
+  speechSynthesis.cancel();
+  document.getElementById("voiceModeOverlay").style.display = "none";
+}
+
+function listenForVoiceInput() {
+  if (!voiceModeActive) return;
+  setVoiceStatus("listening", "Sun rahi hu... 🎙️", "");
+
+  voiceRecognitionInstance = new SpeechRecognition();
+  voiceRecognitionInstance.lang = "en-IN";
+  voiceRecognitionInstance.continuous = false;
+  voiceRecognitionInstance.interimResults = false;
+
+  voiceRecognitionInstance.onresult = async (event) => {
+    const transcript = event.results[0][0].transcript.trim();
+    if (!transcript) {
+      if (voiceModeActive) listenForVoiceInput();
+      return;
+    }
+    setVoiceStatus("thinking", "Soch rahi hu... ✨", `"${transcript}"`);
+    await handleVoiceMessage(transcript);
+  };
+
+  voiceRecognitionInstance.onerror = () => {
+    if (voiceModeActive) setTimeout(listenForVoiceInput, 800);
+  };
+
+  try { voiceRecognitionInstance.start(); } catch (e) { console.log(e); }
+}
+
+async function handleVoiceMessage(text) {
+  removeWelcomeScreen();
+  addMessage(text, "user");
+
+  let replyText;
+  const directReply = getDirectDateTimeReply(text);
+  if (directReply) {
+    replyText = directReply;
+  } else if (isWeatherQuery(text)) {
+    replyText = await getDirectWeatherReply(text);
+  } else {
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, message: text, image: null, hurairahMode })
+      });
+      const data = await res.json();
+      replyText = data.reply || "Kuch samajh nahi aaya.";
+    } catch (err) {
+      replyText = "Connection mein problem aa rahi hai.";
+    }
+  }
+
+  addMessage(replyText, "bot", true);
+
+  if (!voiceModeActive) return;
+  setVoiceStatus("speaking", "Bol rahi hu... 🔊", "");
+  await speakForVoiceMode(replyText);
+
+  if (voiceModeActive) listenForVoiceInput();
+}
+
+function speakForVoiceMode(text) {
+  return new Promise((resolve) => {
+    fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
+      method: "POST",
+      headers: {
+        "xi-api-key": ELEVENLABS_API_KEY,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        text: text,
+        model_id: "eleven_turbo_v2_5",
+        voice_settings: {
+          stability: 0.4,
+          similarity_boost: 0.9,
+          style: 0.5,
+          use_speaker_boost: true
+        }
+      })
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("ElevenLabs error");
+        return res.blob();
+      })
+      .then((blob) => {
+        const audioUrl = URL.createObjectURL(blob);
+        const audio = new Audio(audioUrl);
+        audio.play();
+        audio.onended = () => {
+          URL.revokeObjectURL(audioUrl);
+          resolve();
+        };
+      })
+      .catch(() => {
+        const speech = new SpeechSynthesisUtterance(text);
+        speech.lang = "en-IN";
+        speech.rate = 1;
+        speech.onend = resolve;
+        speech.onerror = resolve;
+        speechSynthesis.speak(speech);
+      });
+  });
+}
+
+createVoiceModeUI();
