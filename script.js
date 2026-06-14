@@ -108,7 +108,13 @@ function runCode(btn) {
   const output = document.createElement('div');
   output.className = 'code-output';
 
-  if (lang === 'html') {
+  // ✅ FIX: agar code "<" se start ho raha hai, to use HTML treat karo
+  // chahe label "html" ho ya na ho (AI kabhi-kabhi ```javascript likh deta hai
+  // jab content actually HTML hota hai, jisse eval() error deta tha)
+  const trimmedCode = code.trim();
+  const looksLikeHTML = lang === 'html' || trimmedCode.startsWith('<');
+
+  if (looksLikeHTML) {
     const escaped = code.replace(/"/g, '&quot;');
     output.innerHTML = `
       <div class="output-header">🌐 HTML Preview</div>
