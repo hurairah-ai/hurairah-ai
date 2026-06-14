@@ -57,35 +57,43 @@ function getTime() {
   });
 }
 
-// ✅ NEW: Date/Time ko AI se mat puchwao, seedha device se nikalo (100% sahi rahega)
-function getCurrentDate() {
-  const now = new Date();
-  return now.toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric'
+// ✅ Code highlighting + copy button + markdown format
+function formatMessage(text) {
+  // Code blocks
+  text = text.replace(/```(\w+)?\n?([\s\S]*?)```/g, (match, lang, code) => {
+    const language = lang || 'code';
+    const escapedCode = code.trim()
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    return `<pre><div class="code-header"><span class="code-lang">${language}</span><button class="copy-btn" onclick="copyCode(this)">📋 Copy</button></div><code>${escapedCode}</code></pre>`;
   });
+
+  // Inline code
+  text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  // Bold
+  text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+  // Italic
+  text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+  // New lines
+  text = text.replace(/\n/g, '<br>');
+
+  return text;
 }
 
-function getDirectDateTimeReply(text) {
-  const msg = text.toLowerCase().trim();
-
-  const dateKeywords = ["date", "tarikh", "tareekh", "aaj ki date", "today's date", "todays date"];
-  const timeKeywords = ["time", "samay", "kitne baje", "kitna baj", "current time", "ajka time", "abhi kya time"];
-
-  const isDateQuery = dateKeywords.some(k => msg.includes(k));
-  const isTimeQuery = timeKeywords.some(k => msg.includes(k));
-
-  if (isDateQuery && isTimeQuery) {
-    return `Aaj ki date ${getCurrentDate()} hai aur abhi ka time ${getTime()} hai.`;
-  }
-  if (isDateQuery) {
-    return `Aaj ki date ${getCurrentDate()} hai.`;
-  }
-  if (isTimeQuery) {
-    return `Abhi ka time ${getTime()} hai.`;
-  }
-  return null;
+function copyCode(btn) {
+  const code = btn.closest('pre').querySelector('code').innerText;
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = '✅ Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '📋 Copy';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
 }
 
 function removeWelcomeScreen() {
@@ -141,8 +149,7 @@ async function speakWithElevenLabs(text, btn) {
   }
 }
 
-// ✅ NEW: generatedImage param add kiya bot messages ke liye
-function addMessage(text, type, animate = false, imageData = null, generatedImage = null) {
+function addMessage(text, type, animate = false, imageData = null) {
   const msg = document.createElement("div");
   msg.className = `message ${type}`;
 
@@ -153,20 +160,13 @@ function addMessage(text, type, animate = false, imageData = null, generatedImag
         <div class="bot-name">Hurairah AI</div>
       </div>
       <div class="msg-text"></div>
-      ${generatedImage ? `
-        <div class="generated-img-wrap" style="display:none; margin-top:8px;">
-          <div class="img-loading">🎨 Image load ho rahi hai...</div>
-          <img class="generated-img" style="max-width:100%; border-radius:12px; display:none;" />
-        </div>
-      ` : ""}
       <button class="speak-btn" style="display:none">🔊 Suno</button>
       <div class="time">${getTime()}</div>
     `;
   } else {
-    // ✅ FIXED: Image preview chatbox mein dikhao
     let imageHTML = "";
     if (imageData) {
-      imageHTML = `<img src="${imageData}" style="max-width:200px; max-height:200px; border-radius:12px; display:block; margin-bottom:6px;" />`;
+      imageHTML = `<img src="${imageData}" class="msg-image" />`;
     }
     msg.innerHTML = `
       ${imageHTML}
@@ -180,34 +180,11 @@ function addMessage(text, type, animate = false, imageData = null, generatedImag
 
   const textEl = msg.querySelector(".msg-text");
 
-  // ✅ NEW: Generated image ko reveal karne ka function - single seamless load
-  function revealGeneratedImage() {
-    const wrap = msg.querySelector(".generated-img-wrap");
-    if (!wrap) return;
-    wrap.style.display = "block";
-
-    const imgEl = wrap.querySelector(".generated-img");
-    const loadingEl = wrap.querySelector(".img-loading");
-
-    imgEl.addEventListener("load", () => {
-      loadingEl.style.display = "none";
-      imgEl.style.display = "block";
-      chatBox.scrollTop = chatBox.scrollHeight;
-    });
-
-    imgEl.addEventListener("error", () => {
-      loadingEl.innerHTML = `❌ Image generate nahi ho payi. <a href="${generatedImage}" target="_blank" style="color:#a78bfa;">Yahan tap karo</a>`;
-    });
-
-    imgEl.src = generatedImage;
-    chatBox.scrollTop = chatBox.scrollHeight;
-  }
-
   if (type === "bot" && animate) {
     const speakBtn = msg.querySelector(".speak-btn");
     const cursor = document.createElement("span");
     cursor.className = "cursor";
-    textEl.appendChild(cursor);
+    if (textEl) textEl.appendChild(cursor);
 
     let i = 0;
     const interval = setInterval(() => {
@@ -218,63 +195,54 @@ function addMessage(text, type, animate = false, imageData = null, generatedImag
       } else {
         clearInterval(interval);
         cursor.remove();
+        // ✅ Format apply karo animation ke baad
+        if (textEl) textEl.innerHTML = formatMessage(text);
         speakBtn.style.display = "inline-block";
         speakBtn.addEventListener("click", () => {
           speakWithElevenLabs(text, speakBtn);
         });
-        if (generatedImage) revealGeneratedImage();
       }
     }, 22);
 
   } else if (type === "bot") {
-    if (textEl) textEl.textContent = text;
+    if (textEl) textEl.innerHTML = formatMessage(text);
     const speakBtn = msg.querySelector(".speak-btn");
     speakBtn.style.display = "inline-block";
     speakBtn.addEventListener("click", () => {
       speakWithElevenLabs(text, speakBtn);
     });
-    if (generatedImage) revealGeneratedImage();
   }
 
   chatBox.scrollTop = chatBox.scrollHeight;
-  messages.push({ text, type, generatedImage });
+  messages.push({ text, type });
   localStorage.setItem("hurairah_chat", JSON.stringify(messages));
 }
 
-// ✅ FIXED: Image preview input area mein dikhao
+// ✅ Image preview input ke upar dikhao
 function showImagePreview(imageData, fileName) {
-  // Pehle purana preview hatao
   removeImagePreview();
 
   const preview = document.createElement("div");
   preview.id = "imagePreview";
-  preview.style.cssText = `
-    position: relative;
-    display: inline-block;
-    margin: 8px 12px;
-    border-radius: 12px;
-    overflow: hidden;
-  `;
   preview.innerHTML = `
-    <img src="${imageData}" style="max-width:120px; max-height:120px; border-radius:12px; display:block;" />
-    <button onclick="removeImagePreview()" style="
-      position:absolute; top:4px; right:4px;
-      background:rgba(0,0,0,0.6); border:none;
-      color:white; border-radius:50%;
-      width:22px; height:22px;
-      font-size:12px; cursor:pointer;
-      display:flex; align-items:center; justify-content:center;
-    ">✕</button>
+    <div class="preview-inner">
+      <img src="${imageData}" />
+      <button class="preview-remove" onclick="removeImagePreview()">✕</button>
+    </div>
+    <span class="preview-name">📷 ${fileName}</span>
   `;
 
   const inputArea = document.querySelector(".input-area");
   inputArea.parentNode.insertBefore(preview, inputArea);
-  chatBox.scrollTop = chatBox.scrollHeight;
 }
 
 function removeImagePreview() {
   const preview = document.getElementById("imagePreview");
-  if (preview) preview.remove();
+  if (preview) {
+    preview.remove();
+    selectedImage = null;
+    imageInput.value = "";
+  }
 }
 
 function showThinking() {
@@ -306,21 +274,10 @@ async function sendMessage() {
   }
 
   removeWelcomeScreen();
-  // ✅ FIXED: Image preview chatbox mein dikhao aur input preview hatao
   addMessage(text, "user", false, selectedImage);
   removeImagePreview();
   input.value = "";
   input.style.height = "24px";
-
-  // ✅ NEW: Agar date/time pucha hai, AI ko call hi mat karo - seedha sahi jawab do
-  if (!selectedImage) {
-    const directReply = getDirectDateTimeReply(text);
-    if (directReply) {
-      addMessage(directReply, "bot", true);
-      return;
-    }
-  }
-
   showThinking();
 
   try {
@@ -336,8 +293,7 @@ async function sendMessage() {
     });
     const data = await res.json();
     removeThinking();
-    // ✅ NEW: generatedImage ko addMessage mein pass karo
-    addMessage(data.reply || "Koi response nahi mila", "bot", true, null, data.generatedImage || null);
+    addMessage(data.reply || "Koi response nahi mila", "bot", true);
     selectedImage = null;
     imageInput.value = "";
   } catch (err) {
@@ -384,7 +340,6 @@ if (SpeechRecognition && micBtn) {
 
 attachBtn.addEventListener("click", () => imageInput.click());
 
-// ✅ FIXED: Image select hone pe preview dikhao, direct send mat karo
 imageInput.addEventListener("change", () => {
   const file = imageInput.files[0];
   if (!file) return;
@@ -404,4 +359,3 @@ document.getElementById("clearBtn").addEventListener("click", () => {
     location.reload();
   }
 });
-          
