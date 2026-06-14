@@ -141,7 +141,8 @@ async function speakWithElevenLabs(text, btn) {
   }
 }
 
-function addMessage(text, type, animate = false, imageData = null) {
+// ✅ NEW: generatedImage param add kiya bot messages ke liye
+function addMessage(text, type, animate = false, imageData = null, generatedImage = null) {
   const msg = document.createElement("div");
   msg.className = `message ${type}`;
 
@@ -152,6 +153,12 @@ function addMessage(text, type, animate = false, imageData = null) {
         <div class="bot-name">Hurairah AI</div>
       </div>
       <div class="msg-text"></div>
+      ${generatedImage ? `
+        <div class="generated-img-wrap" style="display:none; margin-top:8px;">
+          <div class="img-loading">🎨 Image load ho rahi hai...</div>
+          <img class="generated-img" src="${generatedImage}" style="max-width:100%; border-radius:12px; display:none;" />
+        </div>
+      ` : ""}
       <button class="speak-btn" style="display:none">🔊 Suno</button>
       <div class="time">${getTime()}</div>
     `;
@@ -173,6 +180,28 @@ function addMessage(text, type, animate = false, imageData = null) {
 
   const textEl = msg.querySelector(".msg-text");
 
+  // ✅ NEW: Generated image ko reveal karne ka function
+  function revealGeneratedImage() {
+    const wrap = msg.querySelector(".generated-img-wrap");
+    if (!wrap) return;
+    wrap.style.display = "block";
+
+    const imgEl = wrap.querySelector(".generated-img");
+    const loadingEl = wrap.querySelector(".img-loading");
+
+    imgEl.addEventListener("load", () => {
+      loadingEl.style.display = "none";
+      imgEl.style.display = "block";
+      chatBox.scrollTop = chatBox.scrollHeight;
+    });
+
+    imgEl.addEventListener("error", () => {
+      loadingEl.textContent = "❌ Image load nahi ho payi";
+    });
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+  }
+
   if (type === "bot" && animate) {
     const speakBtn = msg.querySelector(".speak-btn");
     const cursor = document.createElement("span");
@@ -192,6 +221,7 @@ function addMessage(text, type, animate = false, imageData = null) {
         speakBtn.addEventListener("click", () => {
           speakWithElevenLabs(text, speakBtn);
         });
+        if (generatedImage) revealGeneratedImage();
       }
     }, 22);
 
@@ -202,10 +232,11 @@ function addMessage(text, type, animate = false, imageData = null) {
     speakBtn.addEventListener("click", () => {
       speakWithElevenLabs(text, speakBtn);
     });
+    if (generatedImage) revealGeneratedImage();
   }
 
   chatBox.scrollTop = chatBox.scrollHeight;
-  messages.push({ text, type });
+  messages.push({ text, type, generatedImage });
   localStorage.setItem("hurairah_chat", JSON.stringify(messages));
 }
 
@@ -304,7 +335,8 @@ async function sendMessage() {
     });
     const data = await res.json();
     removeThinking();
-    addMessage(data.reply || "Koi response nahi mila", "bot", true);
+    // ✅ NEW: generatedImage ko addMessage mein pass karo
+    addMessage(data.reply || "Koi response nahi mila", "bot", true, null, data.generatedImage || null);
     selectedImage = null;
     imageInput.value = "";
   } catch (err) {
