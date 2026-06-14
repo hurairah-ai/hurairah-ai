@@ -156,7 +156,7 @@ function addMessage(text, type, animate = false, imageData = null, generatedImag
       ${generatedImage ? `
         <div class="generated-img-wrap" style="display:none; margin-top:8px;">
           <div class="img-loading">🎨 Image load ho rahi hai...</div>
-          <img class="generated-img" src="${generatedImage}" style="max-width:100%; border-radius:12px; display:none;" />
+          <img class="generated-img" style="max-width:100%; border-radius:12px; display:none;" />
         </div>
       ` : ""}
       <button class="speak-btn" style="display:none">🔊 Suno</button>
@@ -189,6 +189,15 @@ function addMessage(text, type, animate = false, imageData = null, generatedImag
     const imgEl = wrap.querySelector(".generated-img");
     const loadingEl = wrap.querySelector(".img-loading");
 
+    let retryCount = 0;
+    const maxRetries = 3;
+
+    function tryLoadImage() {
+      // cache-bust har retry pe new param add karke (taaki Pollinations naya try kare)
+      const urlWithRetry = generatedImage + (generatedImage.includes("?") ? "&" : "?") + "_r=" + retryCount;
+      imgEl.src = urlWithRetry;
+    }
+
     imgEl.addEventListener("load", () => {
       loadingEl.style.display = "none";
       imgEl.style.display = "block";
@@ -196,9 +205,16 @@ function addMessage(text, type, animate = false, imageData = null, generatedImag
     });
 
     imgEl.addEventListener("error", () => {
-      loadingEl.textContent = "❌ Image load nahi ho payi";
+      retryCount++;
+      if (retryCount <= maxRetries) {
+        loadingEl.textContent = `🎨 Image generate ho rahi hai... (try ${retryCount}/${maxRetries})`;
+        setTimeout(tryLoadImage, 4000);
+      } else {
+        loadingEl.innerHTML = `❌ Image load nahi ho payi. <a href="${generatedImage}" target="_blank" style="color:#a78bfa;">Yahan tap karo</a>`;
+      }
     });
 
+    tryLoadImage();
     chatBox.scrollTop = chatBox.scrollHeight;
   }
 
@@ -403,3 +419,4 @@ document.getElementById("clearBtn").addEventListener("click", () => {
     location.reload();
   }
 });
+                        
