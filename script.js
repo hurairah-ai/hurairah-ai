@@ -180,7 +180,7 @@ function addMessage(text, type, animate = false, imageData = null, generatedImag
 
   const textEl = msg.querySelector(".msg-text");
 
-  // ✅ NEW: Generated image ko reveal karne ka function
+  // ✅ NEW: Generated image ko reveal karne ka function - single seamless load
   function revealGeneratedImage() {
     const wrap = msg.querySelector(".generated-img-wrap");
     if (!wrap) return;
@@ -189,15 +189,6 @@ function addMessage(text, type, animate = false, imageData = null, generatedImag
     const imgEl = wrap.querySelector(".generated-img");
     const loadingEl = wrap.querySelector(".img-loading");
 
-    let retryCount = 0;
-    const maxRetries = 3;
-
-    function tryLoadImage() {
-      // cache-bust har retry pe new param add karke (taaki Pollinations naya try kare)
-      const urlWithRetry = generatedImage + (generatedImage.includes("?") ? "&" : "?") + "_r=" + retryCount;
-      imgEl.src = urlWithRetry;
-    }
-
     imgEl.addEventListener("load", () => {
       loadingEl.style.display = "none";
       imgEl.style.display = "block";
@@ -205,16 +196,10 @@ function addMessage(text, type, animate = false, imageData = null, generatedImag
     });
 
     imgEl.addEventListener("error", () => {
-      retryCount++;
-      if (retryCount <= maxRetries) {
-        loadingEl.textContent = `🎨 Image generate ho rahi hai... (try ${retryCount}/${maxRetries})`;
-        setTimeout(tryLoadImage, 4000);
-      } else {
-        loadingEl.innerHTML = `❌ Image load nahi ho payi. <a href="${generatedImage}" target="_blank" style="color:#a78bfa;">Yahan tap karo</a>`;
-      }
+      loadingEl.innerHTML = `❌ Image generate nahi ho payi. <a href="${generatedImage}" target="_blank" style="color:#a78bfa;">Yahan tap karo</a>`;
     });
 
-    tryLoadImage();
+    imgEl.src = generatedImage;
     chatBox.scrollTop = chatBox.scrollHeight;
   }
 
@@ -419,4 +404,3 @@ document.getElementById("clearBtn").addEventListener("click", () => {
     location.reload();
   }
 });
-                        
