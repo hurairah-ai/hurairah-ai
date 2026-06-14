@@ -57,6 +57,37 @@ function getTime() {
   });
 }
 
+// ✅ NEW: Date/Time ko AI se mat puchwao, seedha device se nikalo (100% sahi rahega)
+function getCurrentDate() {
+  const now = new Date();
+  return now.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric'
+  });
+}
+
+function getDirectDateTimeReply(text) {
+  const msg = text.toLowerCase().trim();
+
+  const dateKeywords = ["date", "tarikh", "tareekh", "aaj ki date", "today's date", "todays date"];
+  const timeKeywords = ["time", "samay", "kitne baje", "kitna baj", "current time", "ajka time", "abhi kya time"];
+
+  const isDateQuery = dateKeywords.some(k => msg.includes(k));
+  const isTimeQuery = timeKeywords.some(k => msg.includes(k));
+
+  if (isDateQuery && isTimeQuery) {
+    return `Aaj ki date ${getCurrentDate()} hai aur abhi ka time ${getTime()} hai.`;
+  }
+  if (isDateQuery) {
+    return `Aaj ki date ${getCurrentDate()} hai.`;
+  }
+  if (isTimeQuery) {
+    return `Abhi ka time ${getTime()} hai.`;
+  }
+  return null;
+}
+
 function removeWelcomeScreen() {
   const welcome = document.querySelector(".welcome-screen");
   if (welcome) {
@@ -248,6 +279,16 @@ async function sendMessage() {
   removeImagePreview();
   input.value = "";
   input.style.height = "24px";
+
+  // ✅ NEW: Agar date/time pucha hai, AI ko call hi mat karo - seedha sahi jawab do
+  if (!selectedImage) {
+    const directReply = getDirectDateTimeReply(text);
+    if (directReply) {
+      addMessage(directReply, "bot", true);
+      return;
+    }
+  }
+
   showThinking();
 
   try {
