@@ -60,13 +60,14 @@ function getTime() {
 // ✅ Code highlighting + copy + run button
 function formatMessage(text) {
   text = text.replace(/```(\w+)?\n?([\s\S]*?)```/g, (match, lang, code) => {
-    const language = lang || 'code';
+    const language = lang || 'javascript';
     const escapedCode = code.trim()
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
 
-    const isRunnable = ['javascript', 'js', 'html'].includes(language.toLowerCase());
+    // ✅ FIXED: code, js, javascript, html sab pe Run button
+    const isRunnable = ['javascript', 'js', 'html', 'code'].includes(language.toLowerCase());
     const runBtn = isRunnable
       ? `<button class="run-btn" onclick="runCode(this)">▶ Run</button>`
       : '';
@@ -99,7 +100,6 @@ function runCode(btn) {
   const lang = pre.querySelector('.code-lang').textContent.toLowerCase();
   const code = pre.querySelector('code').innerText;
 
-  // Purana output hatao
   const oldOutput = pre.nextElementSibling;
   if (oldOutput && oldOutput.classList.contains('code-output')) {
     oldOutput.remove();
