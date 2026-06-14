@@ -57,30 +57,27 @@ function getTime() {
   });
 }
 
-// ✅ Code highlighting + copy button + markdown format
+// ✅ Code highlighting + copy + run button
 function formatMessage(text) {
-  // Code blocks
   text = text.replace(/```(\w+)?\n?([\s\S]*?)```/g, (match, lang, code) => {
     const language = lang || 'code';
     const escapedCode = code.trim()
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
-    return `<pre><div class="code-header"><span class="code-lang">${language}</span><button class="copy-btn" onclick="copyCode(this)">📋 Copy</button></div><code>${escapedCode}</code></pre>`;
+
+    const isRunnable = ['javascript', 'js', 'html'].includes(language.toLowerCase());
+    const runBtn = isRunnable
+      ? `<button class="run-btn" onclick="runCode(this)">▶ Run</button>`
+      : '';
+
+    return `<pre><div class="code-header"><span class="code-lang">${language}</span><div style="display:flex;gap:6px;">${runBtn}<button class="copy-btn" onclick="copyCode(this)">📋 Copy</button></div></div><code>${escapedCode}</code></pre>`;
   });
 
-  // Inline code
   text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-  // Bold
   text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-
-  // Italic
   text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
-
-  // New lines
   text = text.replace(/\n/g, '<br>');
-
   return text;
 }
 
@@ -94,6 +91,60 @@ function copyCode(btn) {
       btn.classList.remove('copied');
     }, 2000);
   });
+}
+
+// ✅ Run button function
+function runCode(btn) {
+  const pre = btn.closest('pre');
+  const lang = pre.querySelector('.code-lang').textContent.toLowerCase();
+  const code = pre.querySelector('code').innerText;
+
+  // Purana output hatao
+  const oldOutput = pre.nextElementSibling;
+  if (oldOutput && oldOutput.classList.contains('code-output')) {
+    oldOutput.remove();
+  }
+
+  const output = document.createElement('div');
+  output.className = 'code-output';
+
+  if (lang === 'html') {
+    const escaped = code.replace(/"/g, '&quot;');
+    output.innerHTML = `
+      <div class="output-header">🌐 HTML Preview</div>
+      <iframe srcdoc="${escaped}" style="width:100%;height:200px;border:none;background:white;"></iframe>
+    `;
+  } else {
+    output.innerHTML = `<div class="output-header">⚡ Output</div><div class="output-text"></div>`;
+    const outputText = output.querySelector('.output-text');
+
+    const logs = [];
+    const originalLog = console.log;
+    console.log = (...args) => {
+      logs.push(args.map(a => typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)).join(' '));
+      originalLog(...args);
+    };
+
+    try {
+      const result = eval(code);
+      console.log = originalLog;
+
+      if (logs.length > 0) {
+        outputText.textContent = logs.join('\n');
+      } else if (result !== undefined) {
+        outputText.textContent = String(result);
+      } else {
+        outputText.textContent = '✅ Code ran successfully (no output)';
+      }
+    } catch (err) {
+      console.log = originalLog;
+      outputText.textContent = '❌ Error: ' + err.message;
+      outputText.style.color = '#f38ba8';
+    }
+  }
+
+  pre.insertAdjacentElement('afterend', output);
+  output.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 function removeWelcomeScreen() {
@@ -195,7 +246,6 @@ function addMessage(text, type, animate = false, imageData = null) {
       } else {
         clearInterval(interval);
         cursor.remove();
-        // ✅ Format apply karo animation ke baad
         if (textEl) textEl.innerHTML = formatMessage(text);
         speakBtn.style.display = "inline-block";
         speakBtn.addEventListener("click", () => {
@@ -218,7 +268,6 @@ function addMessage(text, type, animate = false, imageData = null) {
   localStorage.setItem("hurairah_chat", JSON.stringify(messages));
 }
 
-// ✅ Image preview input ke upar dikhao
 function showImagePreview(imageData, fileName) {
   removeImagePreview();
 
