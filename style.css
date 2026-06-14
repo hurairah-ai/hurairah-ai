@@ -543,6 +543,20 @@ pre {
 .copy-btn:active { background: rgba(124,58,237,0.6); }
 .copy-btn.copied { color: #4ade80; border-color: #4ade80; }
 
+/* ✅ RUN BUTTON */
+.run-btn {
+  background: rgba(74,222,128,0.2);
+  border: 1px solid rgba(74,222,128,0.4);
+  color: #4ade80;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.run-btn:active { background: rgba(74,222,128,0.4); }
+
 pre code {
   display: block;
   padding: 14px;
@@ -563,6 +577,35 @@ code:not(pre code) {
   font-family: 'Courier New', monospace;
   font-size: 13px;
   color: #a78bfa;
+}
+
+/* ✅ CODE OUTPUT */
+.code-output {
+  background: #13111e;
+  border: 1px solid rgba(124,58,237,0.3);
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  overflow: hidden;
+  margin-top: -10px;
+  margin-bottom: 10px;
+}
+
+.output-header {
+  padding: 6px 14px;
+  font-size: 12px;
+  color: #a78bfa;
+  background: rgba(124,58,237,0.1);
+  border-bottom: 1px solid rgba(124,58,237,0.2);
+  font-weight: 600;
+}
+
+.output-text {
+  padding: 12px 14px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  color: #a6e3a1;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 /* MOBILE */
