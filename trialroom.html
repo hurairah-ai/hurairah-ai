@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hurairah Trial Room AI</title>
+<style>
+body{margin:0;font-family:Arial;background:linear-gradient(135deg,#0f172a,#1e1b4b);color:#fff}
+.wrap{max-width:520px;margin:auto;padding:20px}
+.card{background:rgba(255,255,255,.08);backdrop-filter:blur(12px);padding:20px;border-radius:24px}
+h1{text-align:center}
+input,button{width:100%;padding:14px;margin-top:12px;border-radius:14px;border:none}
+button{background:#7c3aed;color:#fff;font-weight:bold}
+.preview{margin-top:15px}
+.preview img{width:100%;border-radius:18px}
+.small{opacity:.8;text-align:center}
+</style></head>
+<body>
+<div class="wrap">
+<div class="card">
+<h1>👕 Hurairah Trial Room AI</h1>
+<p class="small">Premium Demo UI</p>
+<input type="file" id="person" accept="image/*">
+<input type="file" id="cloth" accept="image/*">
+<button onclick="generate()">✨ Generate Try-On</button>
+<div id="status"></div>
+<div id="out" class="preview"></div>
+<p><a href="index.html" style="color:white">⬅ Back to Hurairah AI</a></p>
+</div></div>
+<script>
+function generate(){
+ let p=document.getElementById('person').files[0];
+ let c=document.getElementById('cloth').files[0];
+ if(!p||!c){alert('Dono images upload karo');return;}
+ document.getElementById('status').innerHTML='⏳ AI processing demo...';
+ setTimeout(()=>{
+   let url=URL.createObjectURL(p);
+   document.getElementById('out').innerHTML='<img src="'+url+'"><p>Demo Preview. Real AI API baad me connect hogi.</p>';
+   document.getElementById('status').innerHTML='✅ Complete';
+ },2000);
+}
+</script>
+</body></html>
