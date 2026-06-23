@@ -144,23 +144,6 @@ async function getDirectWeatherReply(text) {
   }
 }
 
-function isImageRequest(text) {
-  const msg = text.toLowerCase();
-  const keywords = [
-    "image banao", "image bana", "photo banao", "photo bana",
-    "picture banao", "picture bana", "tasveer banao", "tasveer bana",
-    "generate image", "image generate", "image of", "draw"
-  ];
-  return keywords.some(k => msg.includes(k));
-}
-
-function extractImagePrompt(text) {
-  return text
-    .replace(/image banao|image bana|photo banao|photo bana|picture banao|picture bana|tasveer banao|tasveer bana|generate image|image generate|image of|draw/gi, "")
-    .replace(/[:\-]/g, "")
-    .trim();
-}
-
 async function generateImage(prompt) {
   return new Promise((resolve, reject) => {
     const encodedPrompt = encodeURIComponent(prompt);
@@ -242,6 +225,7 @@ async function speakWithElevenLabs(text, btn) {
         URL.revokeObjectURL(audioUrl);
         resolve();
       };
+      audio.onerror = () => resolve();
     });
   } catch (err) {
     if(btn) {
@@ -254,6 +238,7 @@ async function speakWithElevenLabs(text, btn) {
       speech.rate = 1;
       speechSynthesis.speak(speech);
       speech.onend = () => resolve();
+      speech.onerror = () => resolve();
     });
   }
 }
@@ -423,37 +408,34 @@ async function sendMessage() {
       return;
     }
 
-    if (isImageRequest(text)) {
-      const prompt = extractImagePrompt(text) || text;
-      showThinking();
-      const loadingMsg = document.createElement("div");
-      loadingMsg.className = "message bot";
-      loadingMsg.id = "imgLoadingMsg";
-      loadingMsg.innerHTML = `
-        <div class="bot-header">
-          <div class="bot-avatar">✨</div>
-          <div class="bot-name">Hurairah AI</div>
-        </div>
-        <div class="msg-text">🎨 Image bana raha hoon... thoda wait karo!</div>
-        <div class="time">${getTime()}</div>
-      `;
-      chatBox.appendChild(loadingMsg);
-      chatBox.scrollTop = chatBox.scrollHeight;
+    showThinking();
+    const loadingMsg = document.createElement("div");
+    loadingMsg.className = "message bot";
+    loadingMsg.id = "imgLoadingMsg";
+    loadingMsg.innerHTML = `
+      <div class="bot-header">
+        <div class="bot-avatar">✨</div>
+        <div class="bot-name">Hurairah AI</div>
+      </div>
+      <div class="msg-text">🎨 Image bana raha hoon... thoda wait karo!</div>
+      <div class="time">${getTime()}</div>
+    `;
+    chatBox.appendChild(loadingMsg);
+    chatBox.scrollTop = chatBox.scrollHeight;
 
-      try {
-        const imageUrl = await generateImage(prompt);
-        removeThinking();
-        const oldMsg = document.getElementById("imgLoadingMsg");
-        if (oldMsg) oldMsg.remove();
-        addGeneratedImage(imageUrl, prompt);
-      } catch (err) {
-        removeThinking();
-        const oldMsg = document.getElementById("imgLoadingMsg");
-        if (oldMsg) oldMsg.remove();
-        addMessage("Image generate nahi ho payi 😔 Dobara try karo ya alag prompt likho.", "bot", true);
-      }
-      return;
+    try {
+      const imageUrl = await generateImage(text);
+      removeThinking();
+      const oldMsg = document.getElementById("imgLoadingMsg");
+      if (oldMsg) oldMsg.remove();
+      addGeneratedImage(imageUrl, text);
+    } catch (err) {
+      removeThinking();
+      const oldMsg = document.getElementById("imgLoadingMsg");
+      if (oldMsg) oldMsg.remove();
+      addMessage("Image generate nahi ho payi 😔 Dobara try karo.", "bot", true);
     }
+    return;
   }
 
   showThinking();
@@ -552,7 +534,7 @@ document.getElementById("clearBtn").addEventListener("click", () => {
 });
 
 // =========================================================
-// Live Voice-to-Voice Chat Mode (LIVE TALK IMPLEMENTED)
+// Live Voice-to-Voice Chat Mode (FIXED STUTTER/LOOP LOGIC)
 // =========================================================
 
 function injectVoiceModeStyles() {
@@ -673,6 +655,7 @@ function createVoiceModeUI() {
   liveRec.continuous = false;
 
   let shouldContinueVoice = false;
+  let isAIVoicePlaying = false; // Flag to prevent multi-trigger loop
 
   btn.addEventListener("click", () => {
     overlay.style.display = "flex";
@@ -680,19 +663,27 @@ function createVoiceModeUI() {
     statusText.textContent = "Sun raha hoon... Boliye!";
     orb.className = "voice-orb speaking";
     shouldContinueVoice = true;
+    isAIVoicePlaying = false;
     liveRec.start();
   });
 
   exitBtn.addEventListener("click", () => {
     shouldContinueVoice = false;
+    isAIVoicePlaying = false;
     overlay.style.display = "none";
     liveRec.stop();
     orb.className = "voice-orb";
   });
 
   liveRec.onresult = async (event) => {
+    if (isAIVoicePlaying) return; // Ignore stale speech results during processing
+    
     const userSpeech = event.results[0][0].transcript;
+    if (!userSpeech.trim()) return;
+    
     transcriptText.textContent = userSpeech;
+    isAIVoicePlaying = true; // Lock incoming events
+    liveRec.stop(); // Stop listening explicitly while AI processes
     
     // UI state: Thinking
     orb.className = "voice-orb thinking";
@@ -707,10 +698,11 @@ function createVoiceModeUI() {
     orb.className = "voice-orb speaking";
     statusText.textContent = "Hurairah AI bol raha hai...";
     
-    // ElevenLabs speaks and code waits until it ends
+    // ElevenLabs speaks and code waits until it fully ends
     await speakWithElevenLabs(botText, null);
 
-    // Loop back: restart listening if user didn't exit
+    // Loop back reset
+    isAIVoicePlaying = false;
     if (shouldContinueVoice) {
       statusText.textContent = "Sun raha hoon... Boliye!";
       orb.className = "voice-orb speaking";
@@ -718,16 +710,16 @@ function createVoiceModeUI() {
     }
   };
 
-  liveRec.onerror = () => {
-    if (shouldContinueVoice) {
-      // Loop back even if no audio was captured (silence handling)
+  liveRec.onerror = (err) => {
+    // If mic turns off due to silence, securely restart without stuttering
+    if (shouldContinueVoice && !isAIVoicePlaying) {
       try { liveRec.start(); } catch(e) {}
     }
   };
 
   liveRec.onend = () => {
-    // Restart recognition if user hasn't clicked close and it naturally timed out
-    if (shouldContinueVoice && orb.className !== "voice-orb thinking") {
+    // Trigger window listener again only if AI is not talking
+    if (shouldContinueVoice && !isAIVoicePlaying) {
       try { liveRec.start(); } catch(e) {}
     }
   };
