@@ -144,6 +144,16 @@ async function getDirectWeatherReply(text) {
   }
 }
 
+// 🎨 Image keywords check karne ke liye helper function
+function isImageRequest(text) {
+  const msg = text.toLowerCase();
+  const keywords = [
+    "image", "banao", "bana", "photo", "picture", "tasveer",
+    "generate", "draw", "kitten", "cat", "dog", "painting"
+  ];
+  return keywords.some(k => msg.includes(k));
+}
+
 async function generateImage(prompt) {
   return new Promise((resolve, reject) => {
     const encodedPrompt = encodeURIComponent(prompt);
@@ -408,36 +418,40 @@ async function sendMessage() {
       return;
     }
 
-    showThinking();
-    const loadingMsg = document.createElement("div");
-    loadingMsg.className = "message bot";
-    loadingMsg.id = "imgLoadingMsg";
-    loadingMsg.innerHTML = `
-      <div class="bot-header">
-        <div class="bot-avatar">✨</div>
-        <div class="bot-name">Hurairah AI</div>
-      </div>
-      <div class="msg-text">🎨 Image bana raha hoon... thoda wait karo!</div>
-      <div class="time">${getTime()}</div>
-    `;
-    chatBox.appendChild(loadingMsg);
-    chatBox.scrollTop = chatBox.scrollHeight;
+    // 🚀 FIXED: Sirf tabhi image banayega jab user image keywords likhega, warna text reply karega!
+    if (isImageRequest(text)) {
+      showThinking();
+      const loadingMsg = document.createElement("div");
+      loadingMsg.className = "message bot";
+      loadingMsg.id = "imgLoadingMsg";
+      loadingMsg.innerHTML = `
+        <div class="bot-header">
+          <div class="bot-avatar">✨</div>
+          <div class="bot-name">Hurairah AI</div>
+        </div>
+        <div class="msg-text">🎨 Image bana raha hoon... thoda wait karo!</div>
+        <div class="time">${getTime()}</div>
+      `;
+      chatBox.appendChild(loadingMsg);
+      chatBox.scrollTop = chatBox.scrollHeight;
 
-    try {
-      const imageUrl = await generateImage(text);
-      removeThinking();
-      const oldMsg = document.getElementById("imgLoadingMsg");
-      if (oldMsg) oldMsg.remove();
-      addGeneratedImage(imageUrl, text);
-    } catch (err) {
-      removeThinking();
-      const oldMsg = document.getElementById("imgLoadingMsg");
-      if (oldMsg) oldMsg.remove();
-      addMessage("Image generate nahi ho payi 😔 Dobara try karo.", "bot", true);
+      try {
+        const imageUrl = await generateImage(text);
+        removeThinking();
+        const oldMsg = document.getElementById("imgLoadingMsg");
+        if (oldMsg) oldMsg.remove();
+        addGeneratedImage(imageUrl, text);
+      } catch (err) {
+        removeThinking();
+        const oldMsg = document.getElementById("imgLoadingMsg");
+        if (oldMsg) oldMsg.remove();
+        addMessage("Image generate nahi ho payi 😔 Dobara try karo.", "bot", true);
+      }
+      return;
     }
-    return;
   }
 
+  // Baki saari normal baaton ke liye (jaise "Meri madad karo") backend pe jayega text reply ke liye
   showThinking();
 
   try {
@@ -655,7 +669,7 @@ function createVoiceModeUI() {
   liveRec.continuous = false;
 
   let shouldContinueVoice = false;
-  let isAIVoicePlaying = false; // Flag to prevent multi-trigger loop
+  let isAIVoicePlaying = false;
 
   btn.addEventListener("click", () => {
     overlay.style.display = "flex";
@@ -676,32 +690,27 @@ function createVoiceModeUI() {
   });
 
   liveRec.onresult = async (event) => {
-    if (isAIVoicePlaying) return; // Ignore stale speech results during processing
+    if (isAIVoicePlaying) return;
     
     const userSpeech = event.results[0][0].transcript;
     if (!userSpeech.trim()) return;
     
     transcriptText.textContent = userSpeech;
-    isAIVoicePlaying = true; // Lock incoming events
-    liveRec.stop(); // Stop listening explicitly while AI processes
+    isAIVoicePlaying = true;
+    liveRec.stop();
     
-    // UI state: Thinking
     orb.className = "voice-orb thinking";
     statusText.textContent = "Hurairah AI soch raha hai...";
     
-    // Get text response from worker
     const botText = await getBotResponseDirect(userSpeech);
     addMessage(userSpeech, "user");
     addMessage(botText, "bot", false);
 
-    // UI state: Speaking (playing audio)
     orb.className = "voice-orb speaking";
     statusText.textContent = "Hurairah AI bol raha hai...";
     
-    // ElevenLabs speaks and code waits until it fully ends
     await speakWithElevenLabs(botText, null);
 
-    // Loop back reset
     isAIVoicePlaying = false;
     if (shouldContinueVoice) {
       statusText.textContent = "Sun raha hoon... Boliye!";
@@ -710,15 +719,13 @@ function createVoiceModeUI() {
     }
   };
 
-  liveRec.onerror = (err) => {
-    // If mic turns off due to silence, securely restart without stuttering
+  liveRec.onerror = () => {
     if (shouldContinueVoice && !isAIVoicePlaying) {
       try { liveRec.start(); } catch(e) {}
     }
   };
 
   liveRec.onend = () => {
-    // Trigger window listener again only if AI is not talking
     if (shouldContinueVoice && !isAIVoicePlaying) {
       try { liveRec.start(); } catch(e) {}
     }
