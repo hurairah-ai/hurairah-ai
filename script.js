@@ -462,6 +462,41 @@ input.addEventListener("input", () => {
 });
 
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+// 🎤 MIC BUTTON FIX
+if (SpeechRecognition && micBtn) {
+  const recognition = new SpeechRecognition();
+  recognition.lang = "en-IN";
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  
+  recognition.onstart = () => { 
+    if (recordingPopup) recordingPopup.style.display = "flex"; 
+  };
+  
+  recognition.onend = () => { 
+    if (recordingPopup) recordingPopup.style.display = "none"; 
+  };
+  
+  recognition.onresult = (event) => {
+    let transcript = "";
+    for (let i = 0; i < event.results.length; i++) {
+      transcript += event.results[i][0].transcript;
+    }
+    input.value = transcript; // Jo bolenge wo input me type ho jayega
+  };
+  
+  micBtn.addEventListener("click", () => {
+    try { 
+      recognition.start(); 
+    } catch (err) { 
+      console.log("Mic error:", err); 
+    }
+  });
+} else {
+  if (micBtn) micBtn.style.display = "none"; // Agar browser support na kare to hide kar do
+}
 
 attachBtn.addEventListener("click", () => imageInput.click());
 
