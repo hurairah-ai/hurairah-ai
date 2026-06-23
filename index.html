@@ -26,7 +26,6 @@
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
   }
   
-  /* Input Area Adjustments for Headphone Button */
   .input-area {
     display: flex;
     align-items: center;
@@ -47,15 +46,82 @@
     flex: 1;
     resize: none;
   }
+
+  /* 🎧 Premium Voice Call Overlay Screen */
+  .voice-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: radial-gradient(circle at center, #1e0b36 0%, #070312 100%);
+    z-index: 9999;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 40px 20px;
+    color: white;
+    font-family: sans-serif;
+  }
+  .voice-status-wrap {
+    text-align: center;
+    margin-top: 40px;
+  }
+  .voice-status {
+    font-size: 24px;
+    font-weight: bold;
+    color: #ff85a2;
+    text-shadow: 0 0 10px rgba(255, 64, 129, 0.5);
+    margin-top: 10px;
+  }
+  .voice-wave-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 150px;
+  }
+  .wave-bar {
+    width: 6px;
+    height: 20px;
+    background: linear-gradient(to top, #7c3aed, #ff4081);
+    border-radius: 4px;
+    animation: calmWave 1s infinite ease-in-out;
+  }
+  .wave-bar.active {
+    animation: activeVoice 0.6s infinite alternate ease-in-out;
+  }
+  /* Staggering wave animations */
+  .wave-bar:nth-child(2) { animation-delay: 0.1s; }
+  .wave-bar:nth-child(3) { animation-delay: 0.2s; }
+  .wave-bar:nth-child(4) { animation-delay: 0.3s; }
+  .wave-bar:nth-child(5) { animation-delay: 0.4s; }
+
+  @keyframes calmWave {
+    0%, 100% { height: 15px; }
+    50% { height: 35px; }
+  }
+  @keyframes activeVoice {
+    0% { height: 20px; }
+    100% { height: 110px; }
+  }
+  .close-voice-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: white;
+    padding: 14px 40px;
+    border-radius: 30px;
+    font-size: 16px;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    transition: all 0.3s;
+    margin-bottom: 30px;
+  }
+  .close-voice-btn:hover {
+    background: #ef4444;
+    border-color: #ef4444;
+  }
 </style>
 
 <script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations().then(regs => {
-      regs.forEach(reg => reg.unregister());
-    });
-  }
-
   const cacheBusterVersion = new Date().getTime();
 
   // 1. Dynamic CSS Link
@@ -64,65 +130,148 @@
   cssLink.href = 'style.css?v=' + cacheBusterVersion;
   document.head.appendChild(cssLink);
 
-  // 2. Dynamic JS Script Loader + Real-Time Mic & Headphone Binding
+  // 2. Load script.js
   window.addEventListener('DOMContentLoaded', () => {
-    // Inject custom continuous real-time voice & preview rules into window context before script.js triggers
-    setupRealTimeMicAndHeadphone();
+    setupRealTimeMic();
+    setupContinuousVoiceChat();
 
     const jsScript = document.createElement('script');
     jsScript.src = 'script.js?v=' + cacheBusterVersion;
     document.body.appendChild(jsScript);
   });
 
-  function setupRealTimeMicAndHeadphone() {
+  // 🎙️ Mic Button: Normal Mode Typing
+  function setupRealTimeMic() {
     window.addEventListener('load', () => {
       const micBtn = document.getElementById("micBtn");
-      const headphoneBtn = document.getElementById("headphoneBtn");
       const input = document.getElementById("messageInput");
       const popup = document.getElementById("recordingPopup");
 
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (SpeechRecognition) {
+      if (SpeechRecognition && micBtn) {
         const recognition = new SpeechRecognition();
         recognition.lang = "en-IN";
-        recognition.continuous = false;
-        recognition.interimResults = true; // ✅ Enable live text streaming as you speak
+        recognition.interimResults = true;
 
-        if (micBtn) {
-          micBtn.addEventListener("click", () => {
-            try { 
-              recognition.start(); 
-              if (popup) popup.style.display = "flex";
-            } catch(e) {}
-          });
-        }
+        micBtn.addEventListener("click", () => {
+          try { 
+            recognition.start(); 
+            if (popup) popup.style.display = "flex";
+          } catch(e) {}
+        });
 
         recognition.onresult = (event) => {
           let transcript = "";
           for (let i = event.resultIndex; i < event.results.length; i++) {
             transcript += event.results[i][0].transcript;
           }
-          if (input) input.value = transcript; // Live streaming values into chat box text box
+          if (input) input.value = transcript;
         };
 
         recognition.onend = () => {
           if (popup) popup.style.display = "none";
-          // If text exists, trigger send immediately when user stops speaking
           if (input && input.value.trim() !== "") {
             const sendBtn = document.getElementById("sendBtn");
             if (sendBtn) sendBtn.click();
           }
         };
       }
+    });
+  }
 
-      // 🎧 Headphone Call Overlay Action Handler
-      if (headphoneBtn) {
-        headphoneBtn.addEventListener("click", () => {
-          alert("Voice Conversation Mode Active! 🎧 Ab aap AI ke responses direct sun sakte hain.");
-          // Trigger direct voice flow pipeline activation hook
-          if (micBtn) micBtn.click();
-        });
+  // 🎧 Headphone Button: Continuous Voice-to-Voice Call Engine
+  function setupContinuousVoiceChat() {
+    window.addEventListener('load', () => {
+      const headphoneBtn = document.getElementById("headphoneBtn");
+      const overlay = document.getElementById("voiceOverlay");
+      const statusText = document.getElementById("voiceStatusText");
+      const closeBtn = document.getElementById("closeVoiceBtn");
+      const waveBars = document.querySelectorAll(".wave-bar");
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) return;
+
+      const voiceRecog = new SpeechRecognition();
+      voiceRecog.lang = "en-IN";
+      voiceRecog.continuous = false;
+      voiceRecog.interimResults = false; // Only trigger backend when final sentence is completed
+
+      let isVoiceModeActive = false;
+
+      headphoneBtn.addEventListener("click", () => {
+        isVoiceModeActive = true;
+        overlay.style.display = "flex";
+        startListeningCycle();
+      });
+
+      closeBtn.addEventListener("click", () => {
+        isVoiceModeActive = false;
+        overlay.style.display = "none";
+        try { voiceRecog.stop(); } catch(e){}
+        if (window.currentAudioInstance) window.currentAudioInstance.pause();
+        if (window.speechSynthesis) window.speechSynthesis.cancel();
+      });
+
+      function startListeningCycle() {
+        if (!isVoiceModeActive) return;
+        statusText.innerText = "Listening...";
+        waveBars.forEach(bar => bar.classList.add("active"));
+        try { voiceRecog.start(); } catch(e){}
       }
+
+      voiceRecog.onresult = async (event) => {
+        const spokenText = event.results[0][0].transcript;
+        if (!spokenText.trim()) return;
+
+        statusText.innerText = "Thinking...";
+        waveBars.forEach(bar => bar.classList.remove("active"));
+
+        // Push directly into global system architecture fetch flow
+        try {
+          const apiURL = "https://hurairah-ai.annu8857818.workers.dev";
+          const hMode = sessionStorage.getItem("hurairah_mode") === "true";
+          const user = localStorage.getItem("hurairah_username") || "User";
+
+          // Add user voice chat message to text window behind overlay
+          if (window.addMessage) window.addMessage(spokenText, "user");
+
+          const res = await fetch(apiURL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: user, message: spokenText, hurairahMode: hMode })
+          });
+          const data = await res.json();
+          const replyText = data.reply || "Samajh nahi paya.";
+
+          // Add bot text layout response block
+          if (window.addMessage) window.addMessage(replyText, "bot");
+
+          statusText.innerText = "Speaking...";
+          
+          // Trigger voice out execution flow
+          if (window.speakWithElevenLabs) {
+            await window.speakWithElevenLabs(replyText);
+          } else {
+            // Fallback if ElevenLabs method isn't bound on window object
+            await new Promise((resolve) => {
+              const u = new SpeechSynthesisUtterance(replyText); u.lang = "en-IN";
+              window.speechSynthesis.speak(u);
+              u.onend = resolve;
+            });
+          }
+
+          // Loop execution node back into listening cycle
+          if (isVoiceModeActive) startListeningCycle();
+
+        } catch (err) {
+          statusText.innerText = "Connection Error...";
+          setTimeout(startListeningCycle, 2000);
+        }
+      };
+
+      voiceRecog.onerror = () => {
+        if (isVoiceModeActive) setTimeout(startListeningCycle, 1000);
+      };
     });
   }
 
@@ -137,6 +286,24 @@
 </script>
 </head>
 <body>
+
+<!-- 🎧 Voice Chat Screen Overlay Box -->
+<div id="voiceOverlay" class="voice-overlay">
+  <div class="voice-status-wrap">
+    <h2>Hurairah Voice Room</h2>
+    <div id="voiceStatusText" class="voice-status">Connecting...</div>
+  </div>
+
+  <div class="voice-wave-container">
+    <div class="wave-bar"></div>
+    <div class="wave-bar"></div>
+    <div class="wave-bar"></div>
+    <div class="wave-bar"></div>
+    <div class="wave-bar"></div>
+  </div>
+
+  <button id="closeVoiceBtn" class="close-voice-btn">End Call 📞</button>
+</div>
 
 <div id="nameModal" class="name-modal-overlay">
   <div class="name-modal-box">
@@ -164,9 +331,7 @@
       <span>Hurairah AI</span>
     </div>
     <div class="topbar-right">
-      <a href="trialroom.html" style="text-decoration:none;font-size:24px;">
-        👕
-      </a>
+      <a href="trialroom.html" style="text-decoration:none;font-size:24px;">👕</a>
     </div>
   </div>
 
