@@ -3,6 +3,7 @@ const ELEVENLABS_API_KEY = "sk_ba5c973ec598f00b7293cc1f37675eb24f52363489ea82be"
 const ELEVENLABS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
 
 let username = localStorage.getItem("hurairah_username");
+let currentAudioInstance = null; // Global reference to stop ElevenLabs audio
 
 if (username) {
   document.getElementById("nameModal").style.display = "none";
@@ -76,10 +77,15 @@ if (messages.length > 0) {
         msgEl.innerHTML = `
           <div class="bot-header"><div class="bot-avatar">✨</div><div class="bot-name">Hurairah AI</div></div>
           <div class="msg-text">${msg.text}</div>
-          <button class="speak-btn">🔊 Suno</button>
+          <div class="audio-controls-row" style="display:flex; gap:6px; margin-top:4px;">
+            <button class="speak-btn">🔊 Suno</button>
+            <button class="stop-audio-btn" style="display:none; background:#ef4444; color:white; border:none; border-radius:6px; padding:2px 8px; font-size:12px; cursor:pointer;">🛑 Roko</button>
+          </div>
         `;
         const sBtn = msgEl.querySelector(".speak-btn");
-        if(sBtn) sBtn.addEventListener("click", () => speakWithElevenLabs(msg.text, sBtn));
+        const stBtn = msgEl.querySelector(".stop-audio-btn");
+        if(sBtn) sBtn.addEventListener("click", () => speakWithElevenLabs(msg.text, sBtn, stBtn));
+        if(stBtn) stBtn.addEventListener("click", () => stopAllAudio(sBtn, stBtn));
       }
     } else {
       msgEl.innerHTML = `<div class="msg-text">${msg.text}</div>`;
@@ -113,7 +119,7 @@ function getDirectDateTimeReply(text) {
 
 function isWeatherQuery(text) {
   const msg = text.toLowerCase();
-  const weatherKeywords = ["weather", "mausam", "temperature", "tapman", "baarish", "barish"];
+  const weatherKeywords = ["weather", "mausam", "temperature", "tapman", "baarish", "barish", "rain", "clouds", "badal"];
   return weatherKeywords.some(k => msg.includes(k));
 }
 
@@ -125,7 +131,7 @@ function extractCityName(text) {
     /([a-zA-Z\s]+?)\s+mein\s+(?:weather|mausam)/i,
     /([a-zA-Z\s]+?)\s+(?:weather|mausam)/i
   ];
-  const STOPWORDS = ["today", "now", "abhi", "aaj", "kaisa", "kaisi", "hai", "please", "batao", "kya", "ka", "ki", "ke", "mein", "me", "mausam", "weather", "temperature", "tapman", "is", "the", "whats", "what", "tell", "current"];
+  const STOPWORDS = ["today", "now", "abhi", "aaj", "kaisa", "kaisi", "hai", "please", "batao", "kya", "ka", "ki", "ke", "mein", "me", "mausam", "weather", "temperature", "tapman", "is", "the", "whats", "what", "tell", "current", "barish", "baarish"];
   for (const pattern of patterns) {
     const match = cleaned.match(pattern);
     if (match && match[1]) {
@@ -142,7 +148,7 @@ function extractCityName(text) {
 function getWeatherDescription(code) {
   const map = {
     0: "saaf aasman ☀️", 1: "mostly saaf ☀️", 2: "halka badal ⛅", 3: "badal ☁️",
-    45: "kohra 🌫️", 48: "kohra 🌫️", 51: "halki baarish 🌦️", 53: "baarish 🌦️", 55: "tez baarish 🌧️",
+    45: "kohra 🌫️", 48: "kohra 🌫️", 51: "halki drizzling 🌦️", 53: "halki baarish 🌦️", 55: "tez baarish 🌧️",
     61: "halki baarish 🌧️", 63: "baarish 🌧️", 65: "tez baarish 🌧️", 71: "halki barfbaari ❄️", 73: "barfbaari ❄️", 75: "tez barfbaari ❄️",
     80: "halki shower 🌦️", 81: "shower 🌧️", 82: "tez shower ⛈️", 95: "toofan ⛈️", 96: "toofan with hail ⛈️", 99: "tez toofan with hail ⛈️"
   };
@@ -150,19 +156,45 @@ function getWeatherDescription(code) {
 }
 
 async function getDirectWeatherReply(text) {
-  const city = extractCityName(text);
-  if (!city) { return "Kis shehar ka weather batau? Jaise likho: 'Delhi ka weather' ya 'weather in Mumbai'."; }
+  let city = extractCityName(text);
+  let lat = 18.5204; // Default Pune Latitude
+  let lon = 73.8567; // Default Pune Longitude
+  let placeName = "Pune, India";
+
+  if (city) {
+    try {
+      const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`);
+      const geoData = await geoRes.json();
+      if (geoData.results && geoData.results.length > 0) {
+        const place = geoData.results[0];
+        lat = place.latitude;
+        lon = place.longitude;
+        placeName = place.country ? `${place.name}, ${place.country}` : place.name;
+      } else {
+        return `Mujhe "${city}" naam ka shehar nahi mila. Sahi spelling check karo.`;
+      }
+    } catch (err) {
+      // Fallback directly to local default if geocoding server lags
+    }
+  }
+
   try {
-    const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`);
-    const geoData = await geoRes.json();
-    if (!geoData.results || geoData.results.length === 0) { return `Mujhe "${city}" naam ka shehar nahi mila. Sahi spelling check karo.`; }
-    const place = geoData.results[0];
-    const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current_weather=true`);
+    const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
     const weatherData = await weatherRes.json();
     const cw = weatherData.current_weather;
     const desc = getWeatherDescription(cw.weathercode);
-    const placeName = place.country ? `${place.name}, ${place.country}` : place.name;
-    return `${placeName} mein abhi temperature ${cw.temperature}°C hai aur ${desc} hai. Wind speed ${cw.windspeed} km/h hai.`;
+    
+    // Custom Smart Rain Prediction Logic
+    let rainAlert = "";
+    if ([51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99].includes(cw.weathercode)) {
+      rainAlert = " Haan bhai, aaj baarish ke poore chances hain ya baarish ho rahi hai, umbrella sath rakhna! 🌧️☔";
+    } else if ([2, 3].includes(cw.weathercode)) {
+      rainAlert = " Aasman mein badal chaye hain, halki fulki boondabandi ho sakti hai. ⛅";
+    } else {
+      rainAlert = " Nahi, aaj baarish ke chances nahi hain, mausam clear rahega! ☀️";
+    }
+
+    return `${placeName} mein abhi temperature ${cw.temperature}°C hai aur ${desc} hai.${rainAlert} Wind speed ${cw.windspeed} km/h hai.`;
   } catch (err) { return "Weather fetch karne mein problem aa gayi. Thodi der baad try karo."; }
 }
 
@@ -206,9 +238,25 @@ function removeWelcomeScreen() {
   if (welcome) { welcome.style.opacity = "0"; setTimeout(() => welcome.remove(), 300); }
 }
 
-async function speakWithElevenLabs(text, btn) {
+function stopAllAudio(speakBtn, stopBtn) {
+  if (currentAudioInstance) {
+    currentAudioInstance.pause();
+    currentAudioInstance.currentTime = 0;
+  }
+  if (window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+  }
+  if(speakBtn) speakBtn.textContent = "🔊 Suno";
+  if(stopBtn) stopBtn.style.display = "none";
+}
+
+async function speakWithElevenLabs(text, btn, stopBtn) {
+  stopAllAudio(null, null); // Stop any currently playing speech before initiating a new one
+  
   try {
-    if(btn) { btn.textContent = "⏳ Loading..."; btn.disabled = true; }
+    if(btn) btn.textContent = "⏳ Loading...";
+    if(stopBtn) stopBtn.style.display = "inline-block"; // Show Stop button instantly
+
     const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
       method: "POST",
       headers: { "xi-api-key": ELEVENLABS_API_KEY, "Content-Type": "application/json" },
@@ -217,15 +265,39 @@ async function speakWithElevenLabs(text, btn) {
     if (!res.ok) throw new Error("ElevenLabs error");
     const blob = await res.blob();
     const audioUrl = URL.createObjectURL(blob);
-    const audio = new Audio(audioUrl);
-    if(btn) { btn.textContent = "🔊 Suno"; btn.disabled = false; }
-    audio.play();
-    return new Promise((resolve) => { audio.onended = () => { URL.revokeObjectURL(audioUrl); resolve(); }; audio.onerror = () => resolve(); });
-  } catch (err) {
-    if(btn) { btn.textContent = "🔊 Suno"; btn.disabled = false; }
+    
+    currentAudioInstance = new Audio(audioUrl);
+    if(btn) btn.textContent = "🎙️ Bol raha..";
+    
+    currentAudioInstance.play();
     return new Promise((resolve) => {
-      const speech = new SpeechSynthesisUtterance(text); speech.lang = "en-IN"; speech.rate = 1;
-      mainSpeech = speechSynthesis.speak(speech); speech.onend = () => resolve(); speech.onerror = () => resolve();
+      currentAudioInstance.onended = () => {
+        URL.revokeObjectURL(audioUrl);
+        if(btn) btn.textContent = "🔊 Suno";
+        if(stopBtn) stopBtn.style.display = "none";
+        resolve();
+      };
+      currentAudioInstance.onerror = () => {
+        if(stopBtn) stopBtn.style.display = "none";
+        resolve();
+      };
+    });
+  } catch (err) {
+    if(btn) btn.textContent = "🎙️ Bol raha..";
+    return new Promise((resolve) => {
+      const speech = new SpeechSynthesisUtterance(text); 
+      speech.lang = "en-IN"; 
+      speech.rate = 1;
+      window.speechSynthesis.speak(speech);
+      speech.onend = () => {
+        if(btn) btn.textContent = "🔊 Suno";
+        if(stopBtn) stopBtn.style.display = "none";
+        resolve();
+      };
+      speech.onerror = () => {
+        if(stopBtn) stopBtn.style.display = "none";
+        resolve();
+      };
     });
   }
 }
@@ -238,7 +310,10 @@ function addMessage(text, type, animate = false, imageData = null) {
     msg.innerHTML = `
       <div class="bot-header"><div class="bot-avatar">✨</div><div class="bot-name">Hurairah AI</div></div>
       <div class="msg-text"></div>
-      <button class="speak-btn" style="display:none">🔊 Suno</button>
+      <div class="audio-controls-row" style="display:flex; gap:6px; margin-top:4px;">
+        <button class="speak-btn" style="display:none">🔊 Suno</button>
+        <button class="stop-audio-btn" style="display:none; background:#ef4444; color:white; border:none; border-radius:6px; padding:2px 8px; font-size:12px; cursor:pointer;">🛑 Roko</button>
+      </div>
       <div class="time">${getTime()}</div>
     `;
   } else {
@@ -253,17 +328,26 @@ function addMessage(text, type, animate = false, imageData = null) {
 
   if (type === "bot" && animate) {
     const speakBtn = msg.querySelector(".speak-btn");
+    const stopBtn = msg.querySelector(".stop-audio-btn");
     const cursor = document.createElement("span"); cursor.className = "cursor"; textEl.appendChild(cursor);
     let i = 0;
     const interval = setInterval(() => {
       if (i < text.length) { cursor.insertAdjacentText("beforebegin", text[i]); i++; chatBox.scrollTop = chatBox.scrollHeight; } 
-      else { clearInterval(interval); cursor.remove(); speakBtn.style.display = "inline-block"; speakBtn.addEventListener("click", () => speakWithElevenLabs(text, speakBtn)); }
+      else { 
+        clearInterval(interval); 
+        cursor.remove(); 
+        speakBtn.style.display = "inline-block"; 
+        speakBtn.addEventListener("click", () => speakWithElevenLabs(text, speakBtn, stopBtn)); 
+        stopBtn.addEventListener("click", () => stopAllAudio(speakBtn, stopBtn));
+      }
     }, 22);
   } else if (type === "bot") {
     if (textEl) textEl.textContent = text;
     const speakBtn = msg.querySelector(".speak-btn");
+    const stopBtn = msg.querySelector(".stop-audio-btn");
     speakBtn.style.display = "inline-block";
-    speakBtn.addEventListener("click", () => speakWithElevenLabs(text, speakBtn));
+    speakBtn.addEventListener("click", () => speakWithElevenLabs(text, speakBtn, stopBtn));
+    stopBtn.addEventListener("click", () => stopAllAudio(speakBtn, stopBtn));
   }
 
   if (text) {
@@ -446,6 +530,7 @@ function createVoiceModeUI() {
 
   exitBtn.addEventListener("click", () => {
     shouldContinueVoice = false; isAIVoicePlaying = false; overlay.style.display = "none"; liveRec.stop(); orb.className = "voice-orb";
+    stopAllAudio(null, null);
   });
 
   liveRec.onresult = async (event) => {
@@ -460,7 +545,11 @@ function createVoiceModeUI() {
     addMessage(userSpeech, "user"); addMessage(botText, "bot", false);
 
     orb.className = "voice-orb speaking"; statusText.textContent = "Hurairah AI bol raha hai...";
-    await speakWithElevenLabs(botText, null);
+    
+    // Create temporary buttons for voice interface synchronization
+    const mockSpeakBtn = { textContent: "" };
+    const mockStopBtn = { style: { display: "none" } };
+    await speakWithElevenLabs(botText, mockSpeakBtn, mockStopBtn);
 
     isAIVoicePlaying = false;
     if (shouldContinueVoice) {
