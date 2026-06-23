@@ -20,10 +20,7 @@
       regs.forEach(reg => reg.unregister());
     });
   }
-  if (!sessionStorage.getItem('loaded')) {
-    sessionStorage.setItem('loaded', '1');
-    location.reload(true);
-  }
+  // ❌ Force reload code hata diya gaya hai
 
   // 🔥 PERMANENT CACHE FIX: CSS aur JS ko dynamic unique version ke sath load karna
   const cacheBusterVersion = new Date().getTime();
