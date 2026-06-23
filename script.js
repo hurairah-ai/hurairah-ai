@@ -4,6 +4,105 @@ const ELEVENLABS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
 
 let username = localStorage.getItem("hurairah_username");
 let currentAudioInstance = null;
+let heartInterval = null;
+const maxElements = 18; // 60 FPS stability cap
+
+// Inject lag-free GPU styles dynamically
+function injectRomanticStyles() {
+  if (document.getElementById("romanticDynamicStyles")) return;
+  const style = document.createElement("style");
+  style.id = "romanticDynamicStyles";
+  style.textContent = `
+    body.romantic-mode-on {
+      background: linear-gradient(135deg, #150329 0%, #2e0542 50%, #590640 100%) !important;
+      transition: background 1.2s ease;
+    }
+    body.romantic-mode-on #chatBox {
+      background: transparent !important;
+    }
+    .romantic-reply {
+      border: 1px solid rgba(255, 64, 129, 0.4) !important;
+      background: linear-gradient(135deg, #ff4081 0%, #c51162 100%) !important;
+      color: #fff !important;
+      transform: translateZ(0);
+      will-change: transform;
+      animation: smoothFloat 2s infinite alternate ease-in-out;
+    }
+    @keyframes smoothFloat {
+      0% { transform: translateY(0) translateZ(0); }
+      100% { transform: translateY(-4px) translateZ(0); }
+    }
+    .vfx-layer {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 1;
+    }
+    .vfx-element {
+      position: absolute; color: #ff4081;
+      text-shadow: 0 0 8px rgba(255, 64, 129, 0.4);
+      transform: translateZ(0);
+      will-change: transform, opacity;
+      animation: smoothDrop linear infinite;
+    }
+    @keyframes smoothDrop {
+      0% { transform: translateY(-10vh) rotate(0deg) translateZ(0); opacity: 0; }
+      10% { opacity: 0.8; }
+      90% { opacity: 0.8; }
+      100% { transform: translateY(110vh) rotate(360deg) translateZ(0); opacity: 0; }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function triggerRomanticUI() {
+  injectRomanticStyles();
+  document.body.classList.add("romantic-mode-on");
+  
+  // Custom Transparent Layout Override
+  const container = document.querySelector(".chat-container") || document.querySelector(".chat-wrapper");
+  if (container) {
+    container.style.background = "rgba(255, 255, 255, 0.02)";
+    container.style.border = "1px solid rgba(255, 64, 129, 0.25)";
+    container.style.boxShadow = "0 25px 60px rgba(82, 5, 59, 0.3), 0 0 25px rgba(255, 64, 129, 0.4)";
+  }
+  
+  // Header Text Override to Meri jaan 💕
+  const header = document.getElementById("appHeader") || document.querySelector(".chat-header");
+  if (header) {
+    header.innerHTML = "Meri jaan 💕";
+    header.style.color = "#ff4081";
+    header.style.textShadow = "0 0 10px rgba(255, 64, 129, 0.5)";
+  }
+
+  // Create VFX Layer if missing
+  if (!document.getElementById("vfxLayer")) {
+    const layer = document.createElement("div");
+    layer.id = "vfxLayer";
+    layer.className = "vfx-layer";
+    document.body.appendChild(layer);
+  }
+
+  if (!heartInterval) {
+    heartInterval = setInterval(addHeartSparkle, 350);
+  }
+}
+
+function addHeartSparkle() {
+  const layer = document.getElementById("vfxLayer");
+  if (!layer || layer.children.length >= maxElements) return;
+
+  const item = document.createElement("div");
+  item.className = "vfx-element";
+  const pool = ["💖", "❤️", "✨", "💕", "🌸"];
+  item.innerHTML = pool[Math.floor(Math.random() * pool.length)];
+  
+  item.style.left = Math.random() * 95 + "vw";
+  item.style.animationDuration = (Math.random() * 2 + 4) + "s";
+  item.style.fontSize = (Math.random() * 12 + 18) + "px"; 
+  
+  layer.appendChild(item);
+  setTimeout(() => item.remove(), 5500);
+}
 
 if (username) {
   document.getElementById("nameModal").style.display = "none";
@@ -36,7 +135,6 @@ function chipClick(text) {
   sendMessage();
 }
 
-// 🔐 SMART CHAT STORAGE: Tab validation to clear memory when closed entirely
 if (!sessionStorage.getItem("hurairah_session_active")) {
   localStorage.removeItem("hurairah_chat");
   sessionStorage.setItem("hurairah_session_active", "true");
@@ -44,6 +142,10 @@ if (!sessionStorage.getItem("hurairah_session_active")) {
 
 let messages = JSON.parse(localStorage.getItem("hurairah_chat") || "[]");
 let hurairahMode = sessionStorage.getItem("hurairah_mode") === "true";
+
+if (hurairahMode) {
+  setTimeout(triggerRomanticUI, 500);
+}
 
 const chatBox = document.getElementById("chatBox");
 const input = document.getElementById("messageInput");
@@ -55,7 +157,6 @@ const recordingPopup = document.getElementById("recordingPopup");
 
 let selectedImage = null;
 
-// Render existing messages smoothly on back button/refresh
 if (messages.length > 0) {
   const welcome = document.querySelector(".welcome-screen");
   if (welcome) welcome.remove();
@@ -64,6 +165,9 @@ if (messages.length > 0) {
     const msgEl = document.createElement("div");
     msgEl.className = `message ${msg.type}`;
     if (msg.type === "bot") {
+      const isRomanticActive = localStorage.getItem("hurairah_chat_romantic") === "true" || hurairahMode;
+      const extraClass = isRomanticActive && msg.text.includes("Assalamualaikum") ? "romantic-reply" : "";
+      
       if (msg.text.startsWith("[Image:")) {
         const rawPrompt = msg.text.replace("[Image: ", "").slice(0, -1);
         const encPrompt = encodeURIComponent(rawPrompt);
@@ -77,7 +181,7 @@ if (messages.length > 0) {
       } else {
         msgEl.innerHTML = `
           <div class="bot-header"><div class="bot-avatar">✨</div><div class="bot-name">Hurairah AI</div></div>
-          <div class="msg-text">${msg.text}</div>
+          <div class="msg-text ${extraClass}">${msg.text}</div>
           <div class="audio-controls-row" style="display:flex; gap:6px; margin-top:4px;">
             <button class="speak-btn">🔊 Suno</button>
             <button class="stop-audio-btn" style="display:none; background:#ef4444; color:white; border:none; border-radius:6px; padding:2px 8px; font-size:12px; cursor:pointer;">🛑 Roko</button>
@@ -108,31 +212,24 @@ function getCurrentDate() {
 
 function getDirectDateTimeReply(text) {
   const msg = text.toLowerCase().trim();
-  const dateKeywords = ["date", "tarikh", "tareekh", "aaj ki date", "today's date", "todays date"];
-  const timeKeywords = ["time", "samay", "kitne baje", "kitna baj", "current time", "ajka time", "abhi kya time"];
-  const isDateQuery = dateKeywords.some(k => msg.includes(k));
-  const isTimeQuery = timeKeywords.some(k => msg.includes(k));
-  if (isDateQuery && isTimeQuery) { return `Aaj ki date ${getCurrentDate()} hai aur abhi ka time ${getTime()} hai.`; }
-  if (isDateQuery) return `Aaj ki date ${getCurrentDate()} hai.`;
-  if (isTimeQuery) return `Abhi ka time ${getTime()} hai.`;
+  const dateKeywords = ["date", "tarikh", "tareekh", "aaj ki date", "today's date"];
+  const timeKeywords = ["time", "samay", "kitne baje", "current time", "abhi kya time"];
+  if (dateKeywords.some(k => msg.includes(k)) && timeKeywords.some(k => msg.includes(k))) {
+    return `Aaj ki date ${getCurrentDate()} hai aur abhi ka time ${getTime()} hai.`;
+  }
+  if (dateKeywords.some(k => msg.includes(k))) return `Aaj ki date ${getCurrentDate()} hai.`;
+  if (timeKeywords.some(k => msg.includes(k))) return `Abhi ka time ${getTime()} hai.`;
   return null;
-}
-
-function isWeatherQuery(text) {
-  const msg = text.toLowerCase();
-  const weatherKeywords = ["weather", "mausam", "temperature", "tapman", "baarish", "barish", "rain", "clouds", "badal"];
-  return weatherKeywords.some(k => msg.includes(k));
 }
 
 function extractCityName(text) {
   let msg = text.toLowerCase().replace(/[?.!]/g, "").trim();
   const patterns = [
     /weather\s+(?:in|of|for)\s+([a-zA-Z\s]+)/i,
-    /([a-zA-Z\s]+?)\s+(?:ka|ki|ke)\s+(?:weather|mausam|temperature|tapman|barish|baarish)/i,
-    /([a-zA-Z\s]+?)\s+(?:mein|me)\s+(?:weather|mausam|temperature|tapman|barish|baarish)/i,
-    /(?:weather|mausam|temperature|tapman|barish|baarish)\s+(?:in|mein|me)\s+([a-zA-Z\s]+)/i
+    /([a-zA-Z\s]+?)\s+(?:ka|ki|ke)\s+(?:weather|mausam|temperature|tapman|barish|baarish|vedar)/i,
+    /([a-zA-Z\s]+?)\s+(?:mein|me)\s+(?:weather|mausam|temperature|tapman|barish|baarish|vedar)/i,
+    /(?:weather|mausam|temperature|tapman|barish|baarish|vedar)\s+(?:in|mein|me)\s+([a-zA-Z\s]+)/i
   ];
-
   for (const pattern of patterns) {
     const match = msg.match(pattern);
     if (match && match[1]) {
@@ -140,12 +237,10 @@ function extractCityName(text) {
       if(city) return city;
     }
   }
-
   const words = msg.split(/\s+/);
-  const STOPWORDS = ["today", "now", "abhi", "aaj", "kaisa", "kaisi", "hai", "please", "batao", "kya", "ka", "ki", "ke", "mein", "me", "mausam", "weather", "temperature", "tapman", "is", "the", "whats", "what", "tell", "current", "barish", "baarish", "hogi"];
+  const STOPWORDS = ["today", "now", "abhi", "aaj", "kaisa", "kaisi", "hai", "please", "batao", "kya", "ka", "ki", "ke", "mein", "me", "mausam", "weather", "temperature", "tapman", "is", "the", "whats", "what", "tell", "current", "barish", "baarish", "hogi", "live", "update", "do", "vedar"];
   let filtered = words.filter(w => !STOPWORDS.includes(w));
   if (filtered.length > 0) return filtered[0]; 
-
   return null;
 }
 
@@ -153,29 +248,32 @@ function getWeatherDescription(code) {
   const map = {
     0: "saaf aasman ☀️", 1: "mostly saaf ☀️", 2: "halka badal ⛅", 3: "badal ☁️",
     45: "kohra 🌫️", 48: "kohra 🌫️", 51: "halki drizzling 🌦️", 53: "halki baarish 🌦️", 55: "tez baarish 🌧️",
-    61: "halki baarish 🌧️", 63: "baarish 🌧️", 65: "tez baarish 🌧️", 71: "halki barfbaari ❄️", 73: "barfbaari ❄️", 75: "tez barfbaari ❄️",
-    80: "halki shower 🌦️", 81: "shower 🌧️", 82: "tez shower ⛈️", 95: "toofan ⛈️", 96: "toofan with hail ⛈️", 99: "tez toofan with hail ⛈️"
+    61: "halki baarish 🌧️", 63: "baarish 🌧️", 65: "tez baarish 🌧️", 80: "halki shower 🌦️", 81: "shower 🌧️", 82: "tez shower ⛈️",
+    95: "toofan ⛈️", 96: "toofan with hail ⛈️", 99: "tez toofan with hail ⛈️"
   };
   return map[code] || "mixed weather 🌥️";
 }
 
 async function getDirectWeatherReply(text) {
   let city = extractCityName(text);
-  let lat = 18.5204; // Default Pune
+  let lat = 18.5204; 
   let lon = 73.8567;
   let placeName = "Pune, India";
 
   if (city) {
     try {
-      const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`);
-      const geoData = await geoRes.json();
-      if (geoData.results && geoData.results.length > 0) {
-        const place = geoData.results[0];
-        lat = place.latitude;
-        lon = place.longitude;
-        placeName = place.country ? `${place.name}, ${place.country}` : place.name;
+      if(city.toLowerCase().includes("nalasopara") || city.toLowerCase().includes("nallasopara")) {
+        lat = 19.4164; lon = 72.8185; placeName = "Nalasopara, Maharashtra";
       } else {
-        placeName = city.charAt(0).toUpperCase() + city.slice(1);
+        const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`);
+        const geoData = await geoRes.json();
+        if (geoData.results && geoData.results.length > 0) {
+          const place = geoData.results[0];
+          lat = place.latitude; lon = place.longitude;
+          placeName = place.country ? `${place.name}, ${place.country}` : place.name;
+        } else {
+          placeName = city.charAt(0).toUpperCase() + city.slice(1);
+        }
       }
     } catch (err) {}
   }
@@ -194,14 +292,13 @@ async function getDirectWeatherReply(text) {
     } else {
       rainAlert = " Nahi, aaj baarish ke chances nahi hain, mausam clear rahega! ☀️";
     }
-
-    return `${placeName} mein abhi temperature ${cw.temperature}°C hai aur ${desc} hai.${rainAlert} Wind speed ${cw.windspeed} km/h hai.`;
+    return `${placeName} mein abhi temperature ${cw.temperature}°C hai aur ${desc} hai.${rainAlert}`;
   } catch (err) { return "Weather fetch karne mein problem aa gayi. Thodi der baad try karo."; }
 }
 
 function isImageRequest(text) {
   const msg = text.toLowerCase();
-  const keywords = ["image", "banao", "bana", "photo", "picture", "tasveer", "generate", "draw", "painting", "illustration"];
+  const keywords = ["image", "banao", "bana", "photo", "picture", "tasveer", "generate", "draw"];
   return keywords.some(k => msg.includes(k));
 }
 
@@ -225,7 +322,7 @@ function addGeneratedImage(imageUrl, prompt) {
     <div class="bot-header"><div class="bot-avatar">✨</div><div class="bot-name">Hurairah AI</div></div>
     <div class="msg-text" style="margin-bottom:8px;">Ye rahi teri image 🎨</div>
     <img src="${imageUrl}" alt="${prompt}" onclick="window.open('${imageUrl}', '_blank')" style="max-width:260px; width:100%; border-radius:14px; display:block; margin-top:4px; cursor:pointer;" loading="lazy" />
-    <button onclick="downloadImage('${imageUrl}')" style="display:inline-block; margin-top:8px; padding:6px 12px; background:#7c3aed; color:white; border:none; border-radius:8px; font-size:12px; cursor:pointer;">⬇️ Download Image</button>
+    <button onclick="downloadImage('${imageUrl}')" style="display:inline-block; margin-top:8px; padding:6px 12px; background:#ff4081; color:white; border:none; border-radius:8px; font-size:12px; cursor:pointer;">⬇️ Download Image</button>
     <div class="time">${getTime()}</div>
   `;
   chatBox.appendChild(msg);
@@ -245,7 +342,7 @@ async function downloadImage(url) {
     link.click();
     document.body.removeChild(link);
   } catch (err) {
-    alert("Download fail hua, aap image par tap karke full screen open karke bhi long press se save kar sakte ho!");
+    alert("Long press karke image save kar lo bhai phone mein!");
   }
 }
 
@@ -266,7 +363,6 @@ async function speakWithElevenLabs(text, btn, stopBtn) {
   try {
     if(btn) btn.textContent = "⏳ Loading...";
     if(stopBtn) stopBtn.style.display = "inline-block";
-
     const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
       method: "POST",
       headers: { "xi-api-key": ELEVENLABS_API_KEY, "Content-Type": "application/json" },
@@ -275,11 +371,9 @@ async function speakWithElevenLabs(text, btn, stopBtn) {
     if (!res.ok) throw new Error("ElevenLabs error");
     const blob = await res.blob();
     const audioUrl = URL.createObjectURL(blob);
-    
     currentAudioInstance = new Audio(audioUrl);
     if(btn) btn.textContent = "🎙️ Bol raha..";
     currentAudioInstance.play();
-    
     return new Promise((resolve) => {
       currentAudioInstance.onended = () => {
         URL.revokeObjectURL(audioUrl);
@@ -305,9 +399,11 @@ function addMessage(text, type, animate = false, imageData = null) {
   msg.className = `message ${type}`;
 
   if (type === "bot") {
+    const isRomanticText = hurairahMode || text.includes("Assalamualaikum");
+    const rClass = isRomanticText ? "romantic-reply" : "";
     msg.innerHTML = `
       <div class="bot-header"><div class="bot-avatar">✨</div><div class="bot-name">Hurairah AI</div></div>
-      <div class="msg-text"></div>
+      <div class="msg-text ${rClass}"></div>
       <div class="audio-controls-row" style="display:flex; gap:6px; margin-top:4px;">
         <button class="speak-btn" style="display:none">🔊 Suno</button>
         <button class="stop-audio-btn" style="display:none; background:#ef4444; color:white; border:none; border-radius:6px; padding:2px 8px; font-size:12px; cursor:pointer;">🛑 Roko</button>
@@ -358,7 +454,7 @@ function showImagePreview(imageData, fileName) {
   preview.id = "imagePreview"; preview.style.cssText = `position: relative; display: inline-block; margin: 8px 12px; border-radius: 12px; overflow: hidden;`;
   preview.innerHTML = `
     <img src="${imageData}" style="max-width:120px; max-height:120px; border-radius:12px; display:block;" />
-    <button onclick="removeImagePreview()" style="position:absolute; top:4px; right:4px; background:rgba(0,0,0,0.6); border:none; color:white; border-radius:50%; width:22px; height:22px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center;">✕</button>
+    <button onclick="removeImagePreview()" style="position:absolute; top:4px; right:4px; background:rgba(0,0,0,0.6); border:none; color:white; border-radius:50%; width:22px; height:22px; font-size:12px; display:flex; align-items:center; justify-content:center;">✕</button>
   `;
   const inputArea = document.querySelector(".input-area");
   inputArea.parentNode.insertBefore(preview, inputArea);
@@ -369,21 +465,15 @@ function removeImagePreview() { const preview = document.getElementById("imagePr
 function showThinking() { const thinking = document.createElement("div"); thinking.className = "thinking"; thinking.id = "thinking"; thinking.innerHTML = `<div class="dot"></div><div class="dot"></div><div class="dot"></div><span class="thinking-text">Hurairah AI likh raha hai...</span>`; chatBox.appendChild(thinking); chatBox.scrollTop = chatBox.scrollHeight; }
 function removeThinking() { const t = document.getElementById("thinking"); if (t) t.remove(); }
 
-async function getBotResponseDirect(textInput) {
-  try {
-    const res = await fetch(API_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, message: textInput, image: null, hurairahMode }) });
-    const data = await res.json();
-    return data.reply || "Koi response nahi mila";
-  } catch (err) { return "Error: " + err.message; }
-}
-
 async function sendMessage() {
   const text = input.value.trim();
   if (!text && !selectedImage) return;
 
-  if (text.toLowerCase() === "mehazabeen pgl hu") {
+  if (text.toLowerCase() === "mehajabeen pgl hu") {
     hurairahMode = true;
     sessionStorage.setItem("hurairah_mode", "true");
+    localStorage.setItem("hurairah_chat_romantic", "true");
+    setTimeout(triggerRomanticUI, 200);
   }
 
   removeWelcomeScreen();
@@ -395,7 +485,8 @@ async function sendMessage() {
     const directReply = getDirectDateTimeReply(text);
     if (directReply) { addMessage(directReply, "bot", true); return; }
 
-    if (isWeatherQuery(text)) {
+    const weatherKeywords = ["weather", "mausam", "temperature", "tapman", "baarish", "barish", "rain", "clouds", "badal", "vedar"];
+    if (weatherKeywords.some(k => text.toLowerCase().includes(k))) {
       showThinking();
       const weatherReply = await getDirectWeatherReply(text);
       removeThinking(); addMessage(weatherReply, "bot", true); return;
@@ -405,9 +496,8 @@ async function sendMessage() {
       showThinking();
       const loadingMsg = document.createElement("div");
       loadingMsg.className = "message bot"; loadingMsg.id = "imgLoadingMsg";
-      loadingMsg.innerHTML = `<div class="bot-header"><div class="bot-avatar">✨</div><div class="bot-name">Hurairah AI</div></div><div class="msg-text">🎨 Image bana raha hoon... thoda wait karo!</div><div class="time">${getTime()}</div>`;
+      loadingMsg.innerHTML = `<div class="bot-header"><div class="bot-avatar">✨</div><div class="bot-name">Hurairah AI</div></div><div class="msg-text">🎨 Image bana raha hoon... thoda wait karo!</div>`;
       chatBox.appendChild(loadingMsg); chatBox.scrollTop = chatBox.scrollHeight;
-
       try {
         const imageUrl = await generateImage(text);
         removeThinking(); const oldMsg = document.getElementById("imgLoadingMsg"); if (oldMsg) oldMsg.remove();
@@ -426,7 +516,13 @@ async function sendMessage() {
     const res = await fetch(API_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, message: text || "Is image mein kya hai?", image: selectedImage, hurairahMode }) });
     const data = await res.json();
     removeThinking();
-    addMessage(data.reply || "Koi response nahi mila", "bot", true);
+    
+    if (data.reply === "TRIGGER_LOCAL_WEATHER") {
+      const weatherReply = await getDirectWeatherReply(text);
+      addMessage(weatherReply, "bot", true);
+    } else {
+      addMessage(data.reply || "Koi response nahi mila", "bot", true);
+    }
     selectedImage = null; imageInput.value = "";
   } catch (err) {
     removeThinking(); addMessage("Error: " + err.message, "bot", true);
@@ -438,7 +534,6 @@ input.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey)
 input.addEventListener("input", () => { input.style.height = "24px"; input.style.height = Math.min(input.scrollHeight, 80) + "px"; });
 
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
 if (SpeechRecognition && micBtn) {
   const recognition = new SpeechRecognition();
   recognition.lang = "en-IN"; recognition.continuous = false; recognition.interimResults = true;
@@ -449,7 +544,7 @@ if (SpeechRecognition && micBtn) {
     for (let i = 0; i < event.results.length; i++) { transcript += event.results[i][0].transcript; }
     input.value = transcript;
   };
-  micBtn.addEventListener("click", () => { try { recognition.start(); } catch (err) { console.log("Mic error:", err); } });
+  micBtn.addEventListener("click", () => { try { recognition.start(); } catch (err) { console.log(err); } });
 } else {
   if (micBtn) micBtn.style.display = "none";
 }
@@ -463,98 +558,7 @@ imageInput.addEventListener("change", () => {
 
 document.getElementById("clearBtn").addEventListener("click", () => {
   if (confirm("Chat delete karna chahte ho?")) {
-    localStorage.removeItem("hurairah_chat"); sessionStorage.removeItem("hurairah_mode");
+    localStorage.removeItem("hurairah_chat"); localStorage.removeItem("hurairah_chat_romantic"); sessionStorage.removeItem("hurairah_mode");
     messages = []; location.reload();
   }
 });
-
-// =========================================================
-// Live Voice-to-Voice Chat Mode
-// =========================================================
-
-function injectVoiceModeStyles() {
-  if (document.getElementById("voiceModeStyles")) return;
-  const style = document.createElement("style");
-  style.id = "voiceModeStyles";
-  style.textContent = `
-    .voice-mode-btn { background: none; border: none; cursor: pointer; font-size: 22px; display: flex; align-items: center; justify-content: center; color: inherit; flex-shrink: 0; margin-left: 6px; }
-    .voice-mode-overlay { display: none; position: fixed; inset: 0; z-index: 9999; background: linear-gradient(135deg, #1a0a2e, #0a0a14); flex-direction: column; align-items: center; justify-content: center; gap: 22px; }
-    .voice-orb { width: 140px; height: 140px; border-radius: 50%; background: linear-gradient(135deg, #7c3aed, #4f6cf7); display: flex; align-items: center; justify-content: center; font-size: 56px; box-shadow: 0 0 60px rgba(124, 58, 237, 0.6); transition: all 0.3s ease; }
-    .voice-orb.thinking { animation: hurairah-spin 1.4s linear infinite; }
-    .voice-orb.speaking { animation: hurairah-pulse 0.6s infinite ease-in-out; }
-    @keyframes hurairah-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
-    @keyframes hurairah-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-    .voice-status { color: #ece9f7; font-size: 18px; font-weight: 600; text-align: center; padding: 0 24px; }
-    .voice-transcript { color: #9590b3; font-size: 14px; text-align: center; padding: 0 32px; min-height: 20px; }
-    .voice-exit-btn { margin-top: 10px; padding: 12px 28px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: #ece9f7; font-size: 14px; font-weight: 600; cursor: pointer; }
-  `;
-  document.head.appendChild(style);
-}
-
-function createVoiceModeUI() {
-  if (document.getElementById("voiceModeBtn")) return;
-  if (!SpeechRecognition) return;
-
-  injectVoiceModeStyles();
-
-  const btn = document.createElement("button");
-  btn.id = "voiceModeBtn"; btn.className = "voice-mode-btn"; btn.title = "Live Voice Chat"; btn.innerHTML = "🎧";
-  
-  const inputArea = document.querySelector(".input-area");
-  if(inputArea) inputArea.appendChild(btn);
-
-  const overlay = document.createElement("div");
-  overlay.id = "voiceModeOverlay"; overlay.className = "voice-mode-overlay";
-  overlay.innerHTML = `<div class="voice-orb" id="voiceOrb">🎙️</div><div class="voice-status" id="voiceStatus">Sun raha hoon... Boliye!</div><div class="voice-transcript" id="voiceTranscript"></div><button class="voice-exit-btn" id="voiceExitBtn">Band Karein</button>`;
-  document.body.appendChild(overlay);
-
-  const orb = document.getElementById("voiceOrb");
-  const statusText = document.getElementById("voiceStatus");
-  const transcriptText = document.getElementById("voiceTranscript");
-  const exitBtn = document.getElementById("voiceExitBtn");
-
-  const liveRec = new SpeechRecognition();
-  liveRec.lang = "en-IN"; liveRec.continuous = false;
-
-  let shouldContinueVoice = false;
-  let isAIVoicePlaying = false;
-
-  btn.addEventListener("click", () => {
-    overlay.style.display = "flex"; transcriptText.textContent = ""; statusText.textContent = "Sun raha hoon... Boliye!";
-    orb.className = "voice-orb speaking"; shouldContinueVoice = true; isAIVoicePlaying = false; liveRec.start();
-  });
-
-  exitBtn.addEventListener("click", () => {
-    shouldContinueVoice = false; isAIVoicePlaying = false; overlay.style.display = "none"; liveRec.stop(); orb.className = "voice-orb";
-    stopAllAudio(null, null);
-  });
-
-  liveRec.onresult = async (event) => {
-    if (isAIVoicePlaying) return;
-    const userSpeech = event.results[0][0].transcript;
-    if (!userSpeech.trim()) return;
-    
-    transcriptText.textContent = userSpeech; isAIVoicePlaying = true; liveRec.stop();
-    orb.className = "voice-orb thinking"; statusText.textContent = "Hurairah AI soch raha hai...";
-    
-    const botText = await getBotResponseDirect(userSpeech);
-    addMessage(userSpeech, "user"); addMessage(botText, "bot", false);
-
-    orb.className = "voice-orb speaking"; statusText.textContent = "Hurairah AI bol raha hai...";
-    
-    const mockSpeakBtn = { textContent: "" };
-    const mockStopBtn = { style: { display: "none" } };
-    await speakWithElevenLabs(botText, mockSpeakBtn, mockStopBtn);
-
-    isAIVoicePlaying = false;
-    if (shouldContinueVoice) {
-      statusText.textContent = "Sun raha hoon... Boliye!"; orb.className = "voice-orb speaking";
-      try { liveRec.start(); } catch(e) {}
-    }
-  };
-
-  liveRec.onerror = () => { if (shouldContinueVoice && !isAIVoicePlaying) { try { liveRec.start(); } catch(e) {} } };
-  liveRec.onend = () => { if (shouldContinueVoice && !isAIVoicePlaying) { try { liveRec.start(); } catch(e) {} } };
-}
-
-createVoiceModeUI();
