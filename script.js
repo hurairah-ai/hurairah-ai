@@ -35,7 +35,13 @@ function chipClick(text) {
   sendMessage();
 }
 
-let messages = JSON.parse(sessionStorage.getItem("hurairah_chat") || "[]");
+// 🔐 SMART CHAT STORAGE: Tab validation to clear memory when closed entirely
+if (!sessionStorage.getItem("hurairah_session_active")) {
+  localStorage.removeItem("hurairah_chat");
+  sessionStorage.setItem("hurairah_session_active", "true");
+}
+
+let messages = JSON.parse(localStorage.getItem("hurairah_chat") || "[]");
 let hurairahMode = sessionStorage.getItem("hurairah_mode") === "true";
 
 const chatBox = document.getElementById("chatBox");
@@ -48,22 +54,49 @@ const recordingPopup = document.getElementById("recordingPopup");
 
 let selectedImage = null;
 
+// Render existing messages smoothly on back button/refresh
+if (messages.length > 0) {
+  const welcome = document.querySelector(".welcome-screen");
+  if (welcome) welcome.remove();
+  
+  messages.forEach(msg => {
+    const msgEl = document.createElement("div");
+    msgEl.className = `message ${msg.type}`;
+    if (msg.type === "bot") {
+      if (msg.text.startsWith("[Image:")) {
+        const rawPrompt = msg.text.replace("[Image: ", "").slice(0, -1);
+        const encPrompt = encodeURIComponent(rawPrompt);
+        const imgUrl = `https://image.pollinations.ai/prompt/${encPrompt}?width=512&height=512&nologo=true`;
+        msgEl.innerHTML = `
+          <div class="bot-header"><div class="bot-avatar">✨</div><div class="bot-name">Hurairah AI</div></div>
+          <div class="msg-text" style="margin-bottom:8px;">Ye rahi teri image 🎨</div>
+          <img src="${imgUrl}" style="max-width:260px; width:100%; border-radius:14px; display:block; margin-top:4px;" />
+        `;
+      } else {
+        msgEl.innerHTML = `
+          <div class="bot-header"><div class="bot-avatar">✨</div><div class="bot-name">Hurairah AI</div></div>
+          <div class="msg-text">${msg.text}</div>
+          <button class="speak-btn">🔊 Suno</button>
+        `;
+        const sBtn = msgEl.querySelector(".speak-btn");
+        if(sBtn) sBtn.addEventListener("click", () => speakWithElevenLabs(msg.text, sBtn));
+      }
+    } else {
+      msgEl.innerHTML = `<div class="msg-text">${msg.text}</div>`;
+    }
+    chatBox.appendChild(msgEl);
+  });
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
+
 function getTime() {
   const now = new Date();
-  return now.toLocaleTimeString('en-IN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true
-  });
+  return now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
 function getCurrentDate() {
   const now = new Date();
-  return now.toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric'
-  });
+  return now.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
 }
 
 function getDirectDateTimeReply(text) {
@@ -72,9 +105,7 @@ function getDirectDateTimeReply(text) {
   const timeKeywords = ["time", "samay", "kitne baje", "kitna baj", "current time", "ajka time", "abhi kya time"];
   const isDateQuery = dateKeywords.some(k => msg.includes(k));
   const isTimeQuery = timeKeywords.some(k => msg.includes(k));
-  if (isDateQuery && isTimeQuery) {
-    return `Aaj ki date ${getCurrentDate()} hai aur abhi ka time ${getTime()} hai.`;
-  }
+  if (isDateQuery && isTimeQuery) { return `Aaj ki date ${getCurrentDate()} hai aur abhi ka time ${getTime()} hai.`; }
   if (isDateQuery) return `Aaj ki date ${getCurrentDate()} hai.`;
   if (isTimeQuery) return `Abhi ka time ${getTime()} hai.`;
   return null;
@@ -111,27 +142,20 @@ function extractCityName(text) {
 function getWeatherDescription(code) {
   const map = {
     0: "saaf aasman ☀️", 1: "mostly saaf ☀️", 2: "halka badal ⛅", 3: "badal ☁️",
-    45: "kohra 🌫️", 48: "kohra 🌫️",
-    51: "halki baarish 🌦️", 53: "baarish 🌦️", 55: "tez baarish 🌧️",
-    61: "halki baarish 🌧️", 63: "baarish 🌧️", 65: "tez baarish 🌧️",
-    71: "halki barfbaari ❄️", 73: "barfbaari ❄️", 75: "tez barfbaari ❄️",
-    80: "halki shower 🌦️", 81: "shower 🌧️", 82: "tez shower ⛈️",
-    95: "toofan ⛈️", 96: "toofan with hail ⛈️", 99: "tez toofan with hail ⛈️"
+    45: "kohra 🌫️", 48: "kohra 🌫️", 51: "halki baarish 🌦️", 53: "baarish 🌦️", 55: "tez baarish 🌧️",
+    61: "halki baarish 🌧️", 63: "baarish 🌧️", 65: "tez baarish 🌧️", 71: "halki barfbaari ❄️", 73: "barfbaari ❄️", 75: "tez barfbaari ❄️",
+    80: "halki shower 🌦️", 81: "shower 🌧️", 82: "tez shower ⛈️", 95: "toofan ⛈️", 96: "toofan with hail ⛈️", 99: "tez toofan with hail ⛈️"
   };
   return map[code] || "mixed weather 🌥️";
 }
 
 async function getDirectWeatherReply(text) {
   const city = extractCityName(text);
-  if (!city) {
-    return "Kis shehar ka weather batau? Jaise likho: 'Delhi ka weather' ya 'weather in Mumbai'.";
-  }
+  if (!city) { return "Kis shehar ka weather batau? Jaise likho: 'Delhi ka weather' ya 'weather in Mumbai'."; }
   try {
     const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1`);
     const geoData = await geoRes.json();
-    if (!geoData.results || geoData.results.length === 0) {
-      return `Mujhe "${city}" naam ka shehar nahi mila. Sahi spelling check karo.`;
-    }
+    if (!geoData.results || geoData.results.length === 0) { return `Mujhe "${city}" naam ka shehar nahi mila. Sahi spelling check karo.`; }
     const place = geoData.results[0];
     const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current_weather=true`);
     const weatherData = await weatherRes.json();
@@ -139,28 +163,24 @@ async function getDirectWeatherReply(text) {
     const desc = getWeatherDescription(cw.weathercode);
     const placeName = place.country ? `${place.name}, ${place.country}` : place.name;
     return `${placeName} mein abhi temperature ${cw.temperature}°C hai aur ${desc} hai. Wind speed ${cw.windspeed} km/h hai.`;
-  } catch (err) {
-    return "Weather fetch karne mein problem aa gayi. Thodi der baad try karo.";
-  }
+  } catch (err) { return "Weather fetch karne mein problem aa gayi. Thodi der baad try karo."; }
 }
 
-// 🎨 Image keywords check karne ke liye helper function
 function isImageRequest(text) {
   const msg = text.toLowerCase();
-  const keywords = [
-    "image", "banao", "bana", "photo", "picture", "tasveer",
-    "generate", "draw", "kitten", "cat", "dog", "painting"
-  ];
+  const keywords = ["image", "banao", "bana", "photo", "picture", "tasveer", "generate", "draw", "painting", "illustration"];
   return keywords.some(k => msg.includes(k));
 }
 
 async function generateImage(prompt) {
   return new Promise((resolve, reject) => {
+    const randomSeed = Math.floor(Math.random() * 1000000);
     const encodedPrompt = encodeURIComponent(prompt);
-    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=512&height=512&nologo=true&seed=${Date.now()}`;
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=512&height=512&nologo=true&seed=${randomSeed}`;
     const img = new Image();
-    img.onload = () => resolve(imageUrl);
-    img.onerror = () => reject(new Error("Image load failed"));
+    const timeout = setTimeout(() => { img.src = ""; reject(new Error("Timeout")); }, 15000);
+    img.onload = () => { clearTimeout(timeout); resolve(imageUrl); };
+    img.onerror = () => { clearTimeout(timeout); reject(new Error("Image load failed")); };
     img.src = imageUrl;
   });
 }
@@ -169,86 +189,43 @@ function addGeneratedImage(imageUrl, prompt) {
   const msg = document.createElement("div");
   msg.className = "message bot";
   msg.innerHTML = `
-    <div class="bot-header">
-      <div class="bot-avatar">✨</div>
-      <div class="bot-name">Hurairah AI</div>
-    </div>
+    <div class="bot-header"><div class="bot-avatar">✨</div><div class="bot-name">Hurairah AI</div></div>
     <div class="msg-text" style="margin-bottom:8px;">Ye rahi teri image 🎨</div>
-    <img src="${imageUrl}" 
-         alt="${prompt}" 
-         style="max-width:260px; width:100%; border-radius:14px; display:block; margin-top:4px;" 
-         loading="lazy" />
-    <a href="${imageUrl}" download="hurairah-ai-image.jpg" 
-       style="display:inline-block; margin-top:8px; font-size:12px; color:#a78bfa; text-decoration:none;">
-      ⬇️ Download
-    </a>
+    <img src="${imageUrl}" alt="${prompt}" style="max-width:260px; width:100%; border-radius:14px; display:block; margin-top:4px;" loading="lazy" />
+    <a href="${imageUrl}" download="hurairah-ai-image.jpg" style="display:inline-block; margin-top:8px; font-size:12px; color:#a78bfa; text-decoration:none;">⬇️ Download</a>
     <div class="time">${getTime()}</div>
   `;
   chatBox.appendChild(msg);
   chatBox.scrollTop = chatBox.scrollHeight;
   messages.push({ text: `[Image: ${prompt}]`, type: "bot" });
-  sessionStorage.setItem("hurairah_chat", JSON.stringify(messages));
+  localStorage.setItem("hurairah_chat", JSON.stringify(messages));
 }
 
 function removeWelcomeScreen() {
   const welcome = document.querySelector(".welcome-screen");
-  if (welcome) {
-    welcome.style.opacity = "0";
-    setTimeout(() => welcome.remove(), 300);
-  }
+  if (welcome) { welcome.style.opacity = "0"; setTimeout(() => welcome.remove(), 300); }
 }
 
 async function speakWithElevenLabs(text, btn) {
   try {
-    if(btn) {
-      btn.textContent = "⏳ Loading...";
-      btn.disabled = true;
-    }
+    if(btn) { btn.textContent = "⏳ Loading..."; btn.disabled = true; }
     const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
       method: "POST",
-      headers: {
-        "xi-api-key": ELEVENLABS_API_KEY,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        text: text,
-        model_id: "eleven_turbo_v2_5",
-        voice_settings: {
-          stability: 0.4,
-          similarity_boost: 0.9,
-          style: 0.5,
-          use_speaker_boost: true
-        }
-      })
+      headers: { "xi-api-key": ELEVENLABS_API_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ text: text, model_id: "eleven_turbo_v2_5", voice_settings: { stability: 0.4, similarity_boost: 0.9, style: 0.5, use_speaker_boost: true } })
     });
     if (!res.ok) throw new Error("ElevenLabs error");
     const blob = await res.blob();
     const audioUrl = URL.createObjectURL(blob);
     const audio = new Audio(audioUrl);
-    if(btn) {
-      btn.textContent = "🔊 Suno";
-      btn.disabled = false;
-    }
+    if(btn) { btn.textContent = "🔊 Suno"; btn.disabled = false; }
     audio.play();
-    return new Promise((resolve) => {
-      audio.onended = () => {
-        URL.revokeObjectURL(audioUrl);
-        resolve();
-      };
-      audio.onerror = () => resolve();
-    });
+    return new Promise((resolve) => { audio.onended = () => { URL.revokeObjectURL(audioUrl); resolve(); }; audio.onerror = () => resolve(); });
   } catch (err) {
-    if(btn) {
-      btn.textContent = "🔊 Suno";
-      btn.disabled = false;
-    }
+    if(btn) { btn.textContent = "🔊 Suno"; btn.disabled = false; }
     return new Promise((resolve) => {
-      const speech = new SpeechSynthesisUtterance(text);
-      speech.lang = "en-IN";
-      speech.rate = 1;
-      speechSynthesis.speak(speech);
-      speech.onend = () => resolve();
-      speech.onerror = () => resolve();
+      const speech = new SpeechSynthesisUtterance(text); speech.lang = "en-IN"; speech.rate = 1;
+      mainSpeech = speechSynthesis.speak(speech); speech.onend = () => resolve(); speech.onerror = () => resolve();
     });
   }
 }
@@ -259,133 +236,65 @@ function addMessage(text, type, animate = false, imageData = null) {
 
   if (type === "bot") {
     msg.innerHTML = `
-      <div class="bot-header">
-        <div class="bot-avatar">✨</div>
-        <div class="bot-name">Hurairah AI</div>
-      </div>
+      <div class="bot-header"><div class="bot-avatar">✨</div><div class="bot-name">Hurairah AI</div></div>
       <div class="msg-text"></div>
       <button class="speak-btn" style="display:none">🔊 Suno</button>
       <div class="time">${getTime()}</div>
     `;
   } else {
     let imageHTML = "";
-    if (imageData) {
-      imageHTML = `<img src="${imageData}" style="max-width:200px; max-height:200px; border-radius:12px; display:block; margin-bottom:6px;" />`;
-    }
-    msg.innerHTML = `
-      ${imageHTML}
-      ${text ? `<div class="msg-text">${text}</div>` : ""}
-      <div class="time">${getTime()}</div>
-    `;
+    if (imageData) { imageHTML = `<img src="${imageData}" style="max-width:200px; max-height:200px; border-radius:12px; display:block; margin-bottom:6px;" />`; }
+    msg.innerHTML = `${imageHTML} ${text ? `<div class="msg-text">${text}</div>` : ""} <div class="time">${getTime()}</div>`;
   }
 
   chatBox.appendChild(msg);
   chatBox.scrollTop = chatBox.scrollHeight;
-
   const textEl = msg.querySelector(".msg-text");
 
   if (type === "bot" && animate) {
     const speakBtn = msg.querySelector(".speak-btn");
-    const cursor = document.createElement("span");
-    cursor.className = "cursor";
-    textEl.appendChild(cursor);
+    const cursor = document.createElement("span"); cursor.className = "cursor"; textEl.appendChild(cursor);
     let i = 0;
     const interval = setInterval(() => {
-      if (i < text.length) {
-        cursor.insertAdjacentText("beforebegin", text[i]);
-        i++;
-        chatBox.scrollTop = chatBox.scrollHeight;
-      } else {
-        clearInterval(interval);
-        cursor.remove();
-        speakBtn.style.display = "inline-block";
-        speakBtn.addEventListener("click", () => {
-          speakWithElevenLabs(text, speakBtn);
-        });
-      }
+      if (i < text.length) { cursor.insertAdjacentText("beforebegin", text[i]); i++; chatBox.scrollTop = chatBox.scrollHeight; } 
+      else { clearInterval(interval); cursor.remove(); speakBtn.style.display = "inline-block"; speakBtn.addEventListener("click", () => speakWithElevenLabs(text, speakBtn)); }
     }, 22);
   } else if (type === "bot") {
     if (textEl) textEl.textContent = text;
     const speakBtn = msg.querySelector(".speak-btn");
     speakBtn.style.display = "inline-block";
-    speakBtn.addEventListener("click", () => {
-      speakWithElevenLabs(text, speakBtn);
-    });
+    speakBtn.addEventListener("click", () => speakWithElevenLabs(text, speakBtn));
   }
 
-  chatBox.scrollTop = chatBox.scrollHeight;
-  messages.push({ text, type });
-  sessionStorage.setItem("hurairah_chat", JSON.stringify(messages));
+  if (text) {
+    messages.push({ text, type });
+    localStorage.setItem("hurairah_chat", JSON.stringify(messages));
+  }
 }
 
 function showImagePreview(imageData, fileName) {
   removeImagePreview();
   const preview = document.createElement("div");
-  preview.id = "imagePreview";
-  preview.style.cssText = `
-    position: relative;
-    display: inline-block;
-    margin: 8px 12px;
-    border-radius: 12px;
-    overflow: hidden;
-  `;
+  preview.id = "imagePreview"; preview.style.cssText = `position: relative; display: inline-block; margin: 8px 12px; border-radius: 12px; overflow: hidden;`;
   preview.innerHTML = `
     <img src="${imageData}" style="max-width:120px; max-height:120px; border-radius:12px; display:block;" />
-    <button onclick="removeImagePreview()" style="
-      position:absolute; top:4px; right:4px;
-      background:rgba(0,0,0,0.6); border:none;
-      color:white; border-radius:50%;
-      width:22px; height:22px;
-      font-size:12px; cursor:pointer;
-      display:flex; align-items:center; justify-content:center;
-    ">✕</button>
+    <button onclick="removeImagePreview()" style="position:absolute; top:4px; right:4px; background:rgba(0,0,0,0.6); border:none; color:white; border-radius:50%; width:22px; height:22px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center;">✕</button>
   `;
   const inputArea = document.querySelector(".input-area");
   inputArea.parentNode.insertBefore(preview, inputArea);
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-function removeImagePreview() {
-  const preview = document.getElementById("imagePreview");
-  if (preview) preview.remove();
-}
-
-function showThinking() {
-  const thinking = document.createElement("div");
-  thinking.className = "thinking";
-  thinking.id = "thinking";
-  thinking.innerHTML = `
-    <div class="dot"></div>
-    <div class="dot"></div>
-    <div class="dot"></div>
-    <span class="thinking-text">Hurairah AI likh raha hai...</span>
-  `;
-  chatBox.appendChild(thinking);
-  chatBox.scrollTop = chatBox.scrollHeight;
-}
-
-function removeThinking() {
-  const t = document.getElementById("thinking");
-  if (t) t.remove();
-}
+function removeImagePreview() { const preview = document.getElementById("imagePreview"); if (preview) preview.remove(); }
+function showThinking() { const thinking = document.createElement("div"); thinking.className = "thinking"; thinking.id = "thinking"; thinking.innerHTML = `<div class="dot"></div><div class="dot"></div><div class="dot"></div><span class="thinking-text">Hurairah AI likh raha hai...</span>`; chatBox.appendChild(thinking); chatBox.scrollTop = chatBox.scrollHeight; }
+function removeThinking() { const t = document.getElementById("thinking"); if (t) t.remove(); }
 
 async function getBotResponseDirect(textInput) {
   try {
-    const res = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        username,
-        message: textInput,
-        image: null,
-        hurairahMode
-      })
-    });
+    const res = await fetch(API_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, message: textInput, image: null, hurairahMode }) });
     const data = await res.json();
     return data.reply || "Koi response nahi mila";
-  } catch (err) {
-    return "Error: " + err.message;
-  }
+  } catch (err) { return "Error: " + err.message; }
 }
 
 async function sendMessage() {
@@ -400,155 +309,87 @@ async function sendMessage() {
   removeWelcomeScreen();
   addMessage(text, "user", false, selectedImage);
   removeImagePreview();
-  input.value = "";
-  input.style.height = "24px";
+  input.value = ""; input.style.height = "24px";
 
   if (!selectedImage) {
     const directReply = getDirectDateTimeReply(text);
-    if (directReply) {
-      addMessage(directReply, "bot", true);
-      return;
-    }
+    if (directReply) { addMessage(directReply, "bot", true); return; }
 
     if (isWeatherQuery(text)) {
       showThinking();
       const weatherReply = await getDirectWeatherReply(text);
-      removeThinking();
-      addMessage(weatherReply, "bot", true);
-      return;
+      removeThinking(); addMessage(weatherReply, "bot", true); return;
     }
 
-    // 🚀 FIXED: Sirf tabhi image banayega jab user image keywords likhega, warna text reply karega!
-    if (isImageRequest(text)) {
+    if (isImageRequest(text) && !hurairahMode) {
       showThinking();
       const loadingMsg = document.createElement("div");
-      loadingMsg.className = "message bot";
-      loadingMsg.id = "imgLoadingMsg";
-      loadingMsg.innerHTML = `
-        <div class="bot-header">
-          <div class="bot-avatar">✨</div>
-          <div class="bot-name">Hurairah AI</div>
-        </div>
-        <div class="msg-text">🎨 Image bana raha hoon... thoda wait karo!</div>
-        <div class="time">${getTime()}</div>
-      `;
-      chatBox.appendChild(loadingMsg);
-      chatBox.scrollTop = chatBox.scrollHeight;
+      loadingMsg.className = "message bot"; loadingMsg.id = "imgLoadingMsg";
+      loadingMsg.innerHTML = `<div class="bot-header"><div class="bot-avatar">✨</div><div class="bot-name">Hurairah AI</div></div><div class="msg-text">🎨 Image bana raha hoon... thoda wait karo!</div><div class="time">${getTime()}</div>`;
+      chatBox.appendChild(loadingMsg); chatBox.scrollTop = chatBox.scrollHeight;
 
       try {
         const imageUrl = await generateImage(text);
-        removeThinking();
-        const oldMsg = document.getElementById("imgLoadingMsg");
-        if (oldMsg) oldMsg.remove();
+        removeThinking(); const oldMsg = document.getElementById("imgLoadingMsg"); if (oldMsg) oldMsg.remove();
         addGeneratedImage(imageUrl, text);
       } catch (err) {
-        removeThinking();
-        const oldMsg = document.getElementById("imgLoadingMsg");
-        if (oldMsg) oldMsg.remove();
-        addMessage("Image generate nahi ho payi 😔 Dobara try karo.", "bot", true);
+        removeThinking(); const oldMsg = document.getElementById("imgLoadingMsg"); if (oldMsg) oldMsg.remove();
+        addMessage("Image generation me time lag rha h 😔 Dobara different prompt try karo.", "bot", true);
       }
       return;
     }
   }
 
-  // Baki saari normal baaton ke liye (jaise "Meri madad karo") backend pe jayega text reply ke liye
   showThinking();
 
   try {
-    const res = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        username,
-        message: text || "Is image mein kya hai?",
-        image: selectedImage,
-        hurairahMode
-      })
-    });
+    const res = await fetch(API_URL, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, message: text || "Is image mein kya hai?", image: selectedImage, hurairahMode }) });
     const data = await res.json();
     removeThinking();
     addMessage(data.reply || "Koi response nahi mila", "bot", true);
-    selectedImage = null;
-    imageInput.value = "";
+    selectedImage = null; imageInput.value = "";
   } catch (err) {
-    removeThinking();
-    addMessage("Error: " + err.message, "bot", true);
+    removeThinking(); addMessage("Error: " + err.message, "bot", true);
   }
 }
 
 sendBtn.addEventListener("click", sendMessage);
-
-input.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
-  }
-});
-
-input.addEventListener("input", () => {
-  input.style.height = "24px";
-  input.style.height = Math.min(input.scrollHeight, 80) + "px";
-});
+input.addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+input.addEventListener("input", () => { input.style.height = "24px"; input.style.height = Math.min(input.scrollHeight, 80) + "px"; });
 
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
 if (SpeechRecognition && micBtn) {
   const recognition = new SpeechRecognition();
-  recognition.lang = "en-IN";
-  recognition.continuous = false;
-  recognition.interimResults = true;
-  
-  recognition.onstart = () => { 
-    if (recordingPopup) recordingPopup.style.display = "flex"; 
-  };
-  
-  recognition.onend = () => { 
-    if (recordingPopup) recordingPopup.style.display = "none"; 
-  };
-  
+  recognition.lang = "en-IN"; recognition.continuous = false; recognition.interimResults = true;
+  recognition.onstart = () => { if (recordingPopup) recordingPopup.style.display = "flex"; };
+  recognition.onend = () => { if (recordingPopup) recordingPopup.style.display = "none"; };
   recognition.onresult = (event) => {
     let transcript = "";
-    for (let i = 0; i < event.results.length; i++) {
-      transcript += event.results[i][0].transcript;
-    }
+    for (let i = 0; i < event.results.length; i++) { transcript += event.results[i][0].transcript; }
     input.value = transcript;
   };
-  
-  micBtn.addEventListener("click", () => {
-    try { 
-      recognition.start(); 
-    } catch (err) { 
-      console.log("Mic error:", err); 
-    }
-  });
+  micBtn.addEventListener("click", () => { try { recognition.start(); } catch (err) { console.log("Mic error:", err); } });
 } else {
   if (micBtn) micBtn.style.display = "none";
 }
 
 attachBtn.addEventListener("click", () => imageInput.click());
-
 imageInput.addEventListener("change", () => {
-  const file = imageInput.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    selectedImage = reader.result;
-    showImagePreview(selectedImage, file.name);
-  };
+  const file = imageInput.files[0]; if (!file) return;
+  const reader = new FileReader(); reader.onload = () => { selectedImage = reader.result; showImagePreview(selectedImage, file.name); };
   reader.readAsDataURL(file);
 });
 
 document.getElementById("clearBtn").addEventListener("click", () => {
   if (confirm("Chat delete karna chahte ho?")) {
-    sessionStorage.removeItem("hurairah_chat");
-    sessionStorage.removeItem("hurairah_mode");
-    messages = [];
-    location.reload();
+    localStorage.removeItem("hurairah_chat"); sessionStorage.removeItem("hurairah_mode");
+    messages = []; location.reload();
   }
 });
 
 // =========================================================
-// Live Voice-to-Voice Chat Mode (FIXED STUTTER/LOOP LOGIC)
+// Live Voice-to-Voice Chat Mode
 // =========================================================
 
 function injectVoiceModeStyles() {
@@ -556,107 +397,35 @@ function injectVoiceModeStyles() {
   const style = document.createElement("style");
   style.id = "voiceModeStyles";
   style.textContent = `
-    .voice-mode-btn {
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-size: 22px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: inherit;
-      flex-shrink: 0;
-      margin-left: 6px;
-    }
-    .voice-mode-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      z-index: 9999;
-      background: linear-gradient(135deg, #1a0a2e, #0a0a14);
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 22px;
-    }
-    .voice-orb {
-      width: 140px;
-      height: 140px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, #7c3aed, #4f6cf7);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 56px;
-      box-shadow: 0 0 60px rgba(124, 58, 237, 0.6);
-      transition: all 0.3s ease;
-    }
+    .voice-mode-btn { background: none; border: none; cursor: pointer; font-size: 22px; display: flex; align-items: center; justify-content: center; color: inherit; flex-shrink: 0; margin-left: 6px; }
+    .voice-mode-overlay { display: none; position: fixed; inset: 0; z-index: 9999; background: linear-gradient(135deg, #1a0a2e, #0a0a14); flex-direction: column; align-items: center; justify-content: center; gap: 22px; }
+    .voice-orb { width: 140px; height: 140px; border-radius: 50%; background: linear-gradient(135deg, #7c3aed, #4f6cf7); display: flex; align-items: center; justify-content: center; font-size: 56px; box-shadow: 0 0 60px rgba(124, 58, 237, 0.6); transition: all 0.3s ease; }
     .voice-orb.thinking { animation: hurairah-spin 1.4s linear infinite; }
     .voice-orb.speaking { animation: hurairah-pulse 0.6s infinite ease-in-out; }
-    @keyframes hurairah-pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.12); }
-    }
-    @keyframes hurairah-spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-    .voice-status {
-      color: #ece9f7;
-      font-size: 18px;
-      font-weight: 600;
-      text-align: center;
-      padding: 0 24px;
-    }
-    .voice-transcript {
-      color: #9590b3;
-      font-size: 14px;
-      text-align: center;
-      padding: 0 32px;
-      min-height: 20px;
-    }
-    .voice-exit-btn {
-      margin-top: 10px;
-      padding: 12px 28px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,0.2);
-      background: rgba(255,255,255,0.08);
-      color: #ece9f7;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-    }
+    @keyframes hurairah-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+    @keyframes hurairah-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .voice-status { color: #ece9f7; font-size: 18px; font-weight: 600; text-align: center; padding: 0 24px; }
+    .voice-transcript { color: #9590b3; font-size: 14px; text-align: center; padding: 0 32px; min-height: 20px; }
+    .voice-exit-btn { margin-top: 10px; padding: 12px 28px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: #ece9f7; font-size: 14px; font-weight: 600; cursor: pointer; }
   `;
   document.head.appendChild(style);
 }
 
 function createVoiceModeUI() {
   if (document.getElementById("voiceModeBtn")) return;
-
   if (!SpeechRecognition) return;
 
   injectVoiceModeStyles();
 
   const btn = document.createElement("button");
-  btn.id = "voiceModeBtn";
-  btn.className = "voice-mode-btn";
-  btn.title = "Live Voice Chat";
-  btn.innerHTML = "🎧";
+  btn.id = "voiceModeBtn"; btn.className = "voice-mode-btn"; btn.title = "Live Voice Chat"; btn.innerHTML = "🎧";
   
   const inputArea = document.querySelector(".input-area");
   if(inputArea) inputArea.appendChild(btn);
 
   const overlay = document.createElement("div");
-  overlay.id = "voiceModeOverlay";
-  overlay.className = "voice-mode-overlay";
-  
-  overlay.innerHTML = `
-    <div class="voice-orb" id="voiceOrb">🎙️</div>
-    <div class="voice-status" id="voiceStatus">Sun raha hoon... Boliye!</div>
-    <div class="voice-transcript" id="voiceTranscript"></div>
-    <button class="voice-exit-btn" id="voiceExitBtn">Band Karein</button>
-  `;
-  
+  overlay.id = "voiceModeOverlay"; overlay.className = "voice-mode-overlay";
+  overlay.innerHTML = `<div class="voice-orb" id="voiceOrb">🎙️</div><div class="voice-status" id="voiceStatus">Sun raha hoon... Boliye!</div><div class="voice-transcript" id="voiceTranscript"></div><button class="voice-exit-btn" id="voiceExitBtn">Band Karein</button>`;
   document.body.appendChild(overlay);
 
   const orb = document.getElementById("voiceOrb");
@@ -665,71 +434,43 @@ function createVoiceModeUI() {
   const exitBtn = document.getElementById("voiceExitBtn");
 
   const liveRec = new SpeechRecognition();
-  liveRec.lang = "en-IN";
-  liveRec.continuous = false;
+  liveRec.lang = "en-IN"; liveRec.continuous = false;
 
   let shouldContinueVoice = false;
   let isAIVoicePlaying = false;
 
   btn.addEventListener("click", () => {
-    overlay.style.display = "flex";
-    transcriptText.textContent = "";
-    statusText.textContent = "Sun raha hoon... Boliye!";
-    orb.className = "voice-orb speaking";
-    shouldContinueVoice = true;
-    isAIVoicePlaying = false;
-    liveRec.start();
+    overlay.style.display = "flex"; transcriptText.textContent = ""; statusText.textContent = "Sun raha hoon... Boliye!";
+    orb.className = "voice-orb speaking"; shouldContinueVoice = true; isAIVoicePlaying = false; liveRec.start();
   });
 
   exitBtn.addEventListener("click", () => {
-    shouldContinueVoice = false;
-    isAIVoicePlaying = false;
-    overlay.style.display = "none";
-    liveRec.stop();
-    orb.className = "voice-orb";
+    shouldContinueVoice = false; isAIVoicePlaying = false; overlay.style.display = "none"; liveRec.stop(); orb.className = "voice-orb";
   });
 
   liveRec.onresult = async (event) => {
     if (isAIVoicePlaying) return;
-    
     const userSpeech = event.results[0][0].transcript;
     if (!userSpeech.trim()) return;
     
-    transcriptText.textContent = userSpeech;
-    isAIVoicePlaying = true;
-    liveRec.stop();
-    
-    orb.className = "voice-orb thinking";
-    statusText.textContent = "Hurairah AI soch raha hai...";
+    transcriptText.textContent = userSpeech; isAIVoicePlaying = true; liveRec.stop();
+    orb.className = "voice-orb thinking"; statusText.textContent = "Hurairah AI soch raha hai...";
     
     const botText = await getBotResponseDirect(userSpeech);
-    addMessage(userSpeech, "user");
-    addMessage(botText, "bot", false);
+    addMessage(userSpeech, "user"); addMessage(botText, "bot", false);
 
-    orb.className = "voice-orb speaking";
-    statusText.textContent = "Hurairah AI bol raha hai...";
-    
+    orb.className = "voice-orb speaking"; statusText.textContent = "Hurairah AI bol raha hai...";
     await speakWithElevenLabs(botText, null);
 
     isAIVoicePlaying = false;
     if (shouldContinueVoice) {
-      statusText.textContent = "Sun raha hoon... Boliye!";
-      orb.className = "voice-orb speaking";
+      statusText.textContent = "Sun raha hoon... Boliye!"; orb.className = "voice-orb speaking";
       try { liveRec.start(); } catch(e) {}
     }
   };
 
-  liveRec.onerror = () => {
-    if (shouldContinueVoice && !isAIVoicePlaying) {
-      try { liveRec.start(); } catch(e) {}
-    }
-  };
-
-  liveRec.onend = () => {
-    if (shouldContinueVoice && !isAIVoicePlaying) {
-      try { liveRec.start(); } catch(e) {}
-    }
-  };
+  liveRec.onerror = () => { if (shouldContinueVoice && !isAIVoicePlaying) { try { liveRec.start(); } catch(e) {} } };
+  liveRec.onend = () => { if (shouldContinueVoice && !isAIVoicePlaying) { try { liveRec.start(); } catch(e) {} } };
 }
 
 createVoiceModeUI();
