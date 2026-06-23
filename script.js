@@ -1,4 +1,3 @@
-alert("SCRIPT LOADED");
 const API_URL = "https://hurairah-ai.annu8857818.workers.dev";
 const ELEVENLABS_API_KEY = "sk_ba5c973ec598f00b7293cc1f37675eb24f52363489ea82be";
 const ELEVENLABS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
@@ -463,26 +462,6 @@ input.addEventListener("input", () => {
 });
 
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-if (SpeechRecognition && micBtn) {
-  const recognition = new SpeechRecognition();
-  recognition.lang = "en-IN";
-  recognition.continuous = false;
-  recognition.interimResults = true;
-  recognition.onstart = () => { if (recordingPopup) recordingPopup.style.display = "flex"; };
-  recognition.onend = () => { if (recordingPopup) recordingPopup.style.display = "none"; };
-  recognition.onresult = (event) => {
-    let transcript = "";
-    for (let i = 0; i < event.results.length; i++) {
-      transcript += event.results[i][0].transcript;
-    }
-    input.value = transcript;
-  };
-  micBtn.addEventListener("click", () => {
-    try { recognition.start(); } catch (err) { console.log(err); }
-  });
-} else {
-  if (micBtn) micBtn.style.display = "none";
-}
 
 attachBtn.addEventListener("click", () => imageInput.click());
 
@@ -507,13 +486,13 @@ document.getElementById("clearBtn").addEventListener("click", () => {
 });
 
 // =========================================================
-// Voice Chat Mode
+// Voice Chat Mode (COMPLETELY FIXED)
 // =========================================================
-let voiceModeActive = false;
-let voiceRecognitionInstance = null;
 
 function injectVoiceModeStyles() {
+  if (document.getElementById("voiceModeStyles")) return;
   const style = document.createElement("style");
+  style.id = "voiceModeStyles";
   style.textContent = `
     .voice-mode-btn {
       background: none;
@@ -525,6 +504,7 @@ function injectVoiceModeStyles() {
       justify-content: center;
       color: inherit;
       flex-shrink: 0;
+      margin-left: 6px;
     }
     .voice-mode-overlay {
       display: none;
@@ -547,7 +527,7 @@ function injectVoiceModeStyles() {
       justify-content: center;
       font-size: 56px;
       box-shadow: 0 0 60px rgba(124, 58, 237, 0.6);
-      animation: hurairah-pulse 2s infinite ease-in-out;
+      transition: all 0.3s ease;
     }
     .voice-orb.thinking { animation: hurairah-spin 1.4s linear infinite; }
     .voice-orb.speaking { animation: hurairah-pulse 0.6s infinite ease-in-out; }
@@ -589,10 +569,14 @@ function injectVoiceModeStyles() {
 }
 
 function createVoiceModeUI() {
-  if (!SpeechRecognition) return;
+  if (!SpeechRecognition) {
+      if(document.getElementById("micBtn")) document.getElementById("micBtn").style.display = "none";
+      return;
+  }
 
   injectVoiceModeStyles();
 
+  // Create Button inside input area
   const btn = document.createElement("button");
   btn.id = "voiceModeBtn";
   btn.className = "voice-mode-btn";
@@ -600,7 +584,25 @@ function createVoiceModeUI() {
   btn.innerHTML = "🎧";
   document.querySelector(".input-area").appendChild(btn);
 
+  // Create Full-Screen Overlay
   const overlay = document.createElement("div");
   overlay.id = "voiceModeOverlay";
   overlay.className = "voice-mode-overlay";
-      
+  
+  overlay.innerHTML = `
+    <div class="voice-orb" id="voiceOrb">🎙️</div>
+    <div class="voice-status" id="voiceStatus">Sun raha hoon... Boliye!</div>
+    <div class="voice-transcript" id="voiceTranscript"></div>
+    <button class="voice-exit-btn" id="voiceExitBtn">Band Karein</button>
+  `;
+  
+  document.body.appendChild(overlay);
+
+  const orb = document.getElementById("voiceOrb");
+  const statusText = document.getElementById("voiceStatus");
+  const transcriptText = document.getElementById("voiceTranscript");
+  const exitBtn = document.getElementById("voiceExitBtn");
+
+  const recognition = new SpeechRecognition();
+  recognition.lang = "en-IN";
+  re
