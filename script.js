@@ -207,8 +207,10 @@ function removeWelcomeScreen() {
 
 async function speakWithElevenLabs(text, btn) {
   try {
-    btn.textContent = "⏳ Loading...";
-    btn.disabled = true;
+    if(btn) {
+      btn.textContent = "⏳ Loading...";
+      btn.disabled = true;
+    }
     const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
       method: "POST",
       headers: {
@@ -230,17 +232,29 @@ async function speakWithElevenLabs(text, btn) {
     const blob = await res.blob();
     const audioUrl = URL.createObjectURL(blob);
     const audio = new Audio(audioUrl);
-    btn.textContent = "🔊 Suno";
-    btn.disabled = false;
+    if(btn) {
+      btn.textContent = "🔊 Suno";
+      btn.disabled = false;
+    }
     audio.play();
-    audio.onended = () => URL.revokeObjectURL(audioUrl);
+    return new Promise((resolve) => {
+      audio.onended = () => {
+        URL.revokeObjectURL(audioUrl);
+        resolve();
+      };
+    });
   } catch (err) {
-    btn.textContent = "🔊 Suno";
-    btn.disabled = false;
-    const speech = new SpeechSynthesisUtterance(text);
-    speech.lang = "en-IN";
-    speech.rate = 1;
-    speechSynthesis.speak(speech);
+    if(btn) {
+      btn.textContent = "🔊 Suno";
+      btn.disabled = false;
+    }
+    return new Promise((resolve) => {
+      const speech = new SpeechSynthesisUtterance(text);
+      speech.lang = "en-IN";
+      speech.rate = 1;
+      speechSynthesis.speak(speech);
+      speech.onend = () => resolve();
+    });
   }
 }
 
@@ -360,11 +374,30 @@ function removeThinking() {
   if (t) t.remove();
 }
 
+async function getBotResponseDirect(textInput) {
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        username,
+        message: textInput,
+        image: null,
+        hurairahMode
+      })
+    });
+    const data = await res.json();
+    return data.reply || "Koi response nahi mila";
+  } catch (err) {
+    return "Error: " + err.message;
+  }
+}
+
 async function sendMessage() {
   const text = input.value.trim();
   if (!text && !selectedImage) return;
 
-  if (text.toLowerCase() === "mehajabeen pgl hu") {
+  if (text.toLowerCase() === "mehazabeen pgl hu") {
     hurairahMode = true;
     sessionStorage.setItem("hurairah_mode", "true");
   }
@@ -462,9 +495,7 @@ input.addEventListener("input", () => {
 });
 
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-// 🎤 MIC BUTTON FIX
 if (SpeechRecognition && micBtn) {
   const recognition = new SpeechRecognition();
   recognition.lang = "en-IN";
@@ -484,7 +515,7 @@ if (SpeechRecognition && micBtn) {
     for (let i = 0; i < event.results.length; i++) {
       transcript += event.results[i][0].transcript;
     }
-    input.value = transcript; // Jo bolenge wo input me type ho jayega
+    input.value = transcript;
   };
   
   micBtn.addEventListener("click", () => {
@@ -495,7 +526,7 @@ if (SpeechRecognition && micBtn) {
     }
   });
 } else {
-  if (micBtn) micBtn.style.display = "none"; // Agar browser support na kare to hide kar do
+  if (micBtn) micBtn.style.display = "none";
 }
 
 attachBtn.addEventListener("click", () => imageInput.click());
@@ -521,7 +552,7 @@ document.getElementById("clearBtn").addEventListener("click", () => {
 });
 
 // =========================================================
-// Voice Chat Mode (COMPLETELY FIXED)
+// Live Voice-to-Voice Chat Mode (LIVE TALK IMPLEMENTED)
 // =========================================================
 
 function injectVoiceModeStyles() {
@@ -606,28 +637,19 @@ function injectVoiceModeStyles() {
 function createVoiceModeUI() {
   if (document.getElementById("voiceModeBtn")) return;
 
-  if (!SpeechRecognition) {
-    if (document.getElementById("micBtn")) {
-      document.getElementById("micBtn").style.display = "none";
-    }
-    return;
-  }
+  if (!SpeechRecognition) return;
 
   injectVoiceModeStyles();
 
-  // Create Button inside input area
   const btn = document.createElement("button");
   btn.id = "voiceModeBtn";
   btn.className = "voice-mode-btn";
-  btn.title = "Voice Chat Mode";
+  btn.title = "Live Voice Chat";
   btn.innerHTML = "🎧";
   
   const inputArea = document.querySelector(".input-area");
-  if(inputArea) {
-      inputArea.appendChild(btn);
-  }
+  if(inputArea) inputArea.appendChild(btn);
 
-  // Create Full-Screen Overlay
   const overlay = document.createElement("div");
   overlay.id = "voiceModeOverlay";
   overlay.className = "voice-mode-overlay";
@@ -641,37 +663,73 @@ function createVoiceModeUI() {
   
   document.body.appendChild(overlay);
 
+  const orb = document.getElementById("voiceOrb");
+  const statusText = document.getElementById("voiceStatus");
   const transcriptText = document.getElementById("voiceTranscript");
   const exitBtn = document.getElementById("voiceExitBtn");
 
-  const recognition = new SpeechRecognition();
-  recognition.lang = "en-IN";
+  const liveRec = new SpeechRecognition();
+  liveRec.lang = "en-IN";
+  liveRec.continuous = false;
+
+  let shouldContinueVoice = false;
 
   btn.addEventListener("click", () => {
     overlay.style.display = "flex";
     transcriptText.textContent = "";
-    recognition.start();
+    statusText.textContent = "Sun raha hoon... Boliye!";
+    orb.className = "voice-orb speaking";
+    shouldContinueVoice = true;
+    liveRec.start();
   });
 
   exitBtn.addEventListener("click", () => {
+    shouldContinueVoice = false;
     overlay.style.display = "none";
-    recognition.stop();
+    liveRec.stop();
+    orb.className = "voice-orb";
   });
 
-  recognition.onresult = (event) => {
-    const text = event.results[0][0].transcript;
-    transcriptText.textContent = text;
-    input.value = text;
-    overlay.style.display = "none";
-    sendMessage();
+  liveRec.onresult = async (event) => {
+    const userSpeech = event.results[0][0].transcript;
+    transcriptText.textContent = userSpeech;
+    
+    // UI state: Thinking
+    orb.className = "voice-orb thinking";
+    statusText.textContent = "Hurairah AI soch raha hai...";
+    
+    // Get text response from worker
+    const botText = await getBotResponseDirect(userSpeech);
+    addMessage(userSpeech, "user");
+    addMessage(botText, "bot", false);
+
+    // UI state: Speaking (playing audio)
+    orb.className = "voice-orb speaking";
+    statusText.textContent = "Hurairah AI bol raha hai...";
+    
+    // ElevenLabs speaks and code waits until it ends
+    await speakWithElevenLabs(botText, null);
+
+    // Loop back: restart listening if user didn't exit
+    if (shouldContinueVoice) {
+      statusText.textContent = "Sun raha hoon... Boliye!";
+      orb.className = "voice-orb speaking";
+      try { liveRec.start(); } catch(e) {}
+    }
   };
 
-  recognition.onerror = () => {
-    overlay.style.display = "none";
+  liveRec.onerror = () => {
+    if (shouldContinueVoice) {
+      // Loop back even if no audio was captured (silence handling)
+      try { liveRec.start(); } catch(e) {}
+    }
   };
 
-  recognition.onend = () => {
-    overlay.style.display = "none";
+  liveRec.onend = () => {
+    // Restart recognition if user hasn't clicked close and it naturally timed out
+    if (shouldContinueVoice && orb.className !== "voice-orb thinking") {
+      try { liveRec.start(); } catch(e) {}
+    }
   };
 }
 
