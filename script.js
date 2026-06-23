@@ -57,7 +57,6 @@ function getTime() {
   });
 }
 
-// ✅ NEW: Date/Time ko AI se mat puchwao, seedha device se nikalo (100% sahi rahega)
 function getCurrentDate() {
   const now = new Date();
   return now.toLocaleDateString('en-GB', {
@@ -69,26 +68,18 @@ function getCurrentDate() {
 
 function getDirectDateTimeReply(text) {
   const msg = text.toLowerCase().trim();
-
   const dateKeywords = ["date", "tarikh", "tareekh", "aaj ki date", "today's date", "todays date"];
   const timeKeywords = ["time", "samay", "kitne baje", "kitna baj", "current time", "ajka time", "abhi kya time"];
-
   const isDateQuery = dateKeywords.some(k => msg.includes(k));
   const isTimeQuery = timeKeywords.some(k => msg.includes(k));
-
   if (isDateQuery && isTimeQuery) {
     return `Aaj ki date ${getCurrentDate()} hai aur abhi ka time ${getTime()} hai.`;
   }
-  if (isDateQuery) {
-    return `Aaj ki date ${getCurrentDate()} hai.`;
-  }
-  if (isTimeQuery) {
-    return `Abhi ka time ${getTime()} hai.`;
-  }
+  if (isDateQuery) return `Aaj ki date ${getCurrentDate()} hai.`;
+  if (isTimeQuery) return `Abhi ka time ${getTime()} hai.`;
   return null;
 }
 
-// ✅ NEW: Live Weather - free Open-Meteo API (no key needed), AI guess nahi karega
 function isWeatherQuery(text) {
   const msg = text.toLowerCase();
   const weatherKeywords = ["weather", "mausam", "temperature", "tapman", "baarish", "barish"];
@@ -104,7 +95,6 @@ function extractCityName(text) {
     /([a-zA-Z\s]+?)\s+(?:weather|mausam)/i
   ];
   const STOPWORDS = ["today", "now", "abhi", "aaj", "kaisa", "kaisi", "hai", "please", "batao", "kya", "ka", "ki", "ke", "mein", "me", "mausam", "weather", "temperature", "tapman", "is", "the", "whats", "what", "tell", "current"];
-
   for (const pattern of patterns) {
     const match = cleaned.match(pattern);
     if (match && match[1]) {
@@ -154,6 +144,60 @@ async function getDirectWeatherReply(text) {
   }
 }
 
+// ✅ NEW: Image Generation via Pollinations AI (Free, No API Key, 24/7)
+function isImageRequest(text) {
+  const msg = text.toLowerCase();
+  const keywords = [
+    "image banao", "image bana", "photo banao", "photo bana",
+    "picture banao", "picture bana", "tasveer banao", "tasveer bana",
+    "generate image", "image generate", "image of", "draw"
+  ];
+  return keywords.some(k => msg.includes(k));
+}
+
+function extractImagePrompt(text) {
+  return text
+    .replace(/image banao|image bana|photo banao|photo bana|picture banao|picture bana|tasveer banao|tasveer bana|generate image|image generate|image of|draw/gi, "")
+    .replace(/[:\-]/g, "")
+    .trim();
+}
+
+async function generateImage(prompt) {
+  return new Promise((resolve, reject) => {
+    const encodedPrompt = encodeURIComponent(prompt);
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=512&height=512&nologo=true&seed=${Date.now()}`;
+    const img = new Image();
+    img.onload = () => resolve(imageUrl);
+    img.onerror = () => reject(new Error("Image load failed"));
+    img.src = imageUrl;
+  });
+}
+
+function addGeneratedImage(imageUrl, prompt) {
+  const msg = document.createElement("div");
+  msg.className = "message bot";
+  msg.innerHTML = `
+    <div class="bot-header">
+      <div class="bot-avatar">✨</div>
+      <div class="bot-name">Hurairah AI</div>
+    </div>
+    <div class="msg-text" style="margin-bottom:8px;">Ye rahi teri image 🎨</div>
+    <img src="${imageUrl}" 
+         alt="${prompt}" 
+         style="max-width:260px; width:100%; border-radius:14px; display:block; margin-top:4px;" 
+         loading="lazy" />
+    <a href="${imageUrl}" download="hurairah-ai-image.jpg" 
+       style="display:inline-block; margin-top:8px; font-size:12px; color:#a78bfa; text-decoration:none;">
+      ⬇️ Download
+    </a>
+    <div class="time">${getTime()}</div>
+  `;
+  chatBox.appendChild(msg);
+  chatBox.scrollTop = chatBox.scrollHeight;
+  messages.push({ text: `[Image: ${prompt}]`, type: "bot" });
+  localStorage.setItem("hurairah_chat", JSON.stringify(messages));
+}
+
 function removeWelcomeScreen() {
   const welcome = document.querySelector(".welcome-screen");
   if (welcome) {
@@ -166,7 +210,6 @@ async function speakWithElevenLabs(text, btn) {
   try {
     btn.textContent = "⏳ Loading...";
     btn.disabled = true;
-
     const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
       method: "POST",
       headers: {
@@ -184,19 +227,14 @@ async function speakWithElevenLabs(text, btn) {
         }
       })
     });
-
     if (!res.ok) throw new Error("ElevenLabs error");
-
     const blob = await res.blob();
     const audioUrl = URL.createObjectURL(blob);
     const audio = new Audio(audioUrl);
-
     btn.textContent = "🔊 Suno";
     btn.disabled = false;
     audio.play();
-
     audio.onended = () => URL.revokeObjectURL(audioUrl);
-
   } catch (err) {
     btn.textContent = "🔊 Suno";
     btn.disabled = false;
@@ -222,7 +260,6 @@ function addMessage(text, type, animate = false, imageData = null) {
       <div class="time">${getTime()}</div>
     `;
   } else {
-    // ✅ FIXED: Image preview chatbox mein dikhao
     let imageHTML = "";
     if (imageData) {
       imageHTML = `<img src="${imageData}" style="max-width:200px; max-height:200px; border-radius:12px; display:block; margin-bottom:6px;" />`;
@@ -244,7 +281,6 @@ function addMessage(text, type, animate = false, imageData = null) {
     const cursor = document.createElement("span");
     cursor.className = "cursor";
     textEl.appendChild(cursor);
-
     let i = 0;
     const interval = setInterval(() => {
       if (i < text.length) {
@@ -260,7 +296,6 @@ function addMessage(text, type, animate = false, imageData = null) {
         });
       }
     }, 22);
-
   } else if (type === "bot") {
     if (textEl) textEl.textContent = text;
     const speakBtn = msg.querySelector(".speak-btn");
@@ -275,11 +310,8 @@ function addMessage(text, type, animate = false, imageData = null) {
   localStorage.setItem("hurairah_chat", JSON.stringify(messages));
 }
 
-// ✅ FIXED: Image preview input area mein dikhao
 function showImagePreview(imageData, fileName) {
-  // Pehle purana preview hatao
   removeImagePreview();
-
   const preview = document.createElement("div");
   preview.id = "imagePreview";
   preview.style.cssText = `
@@ -300,7 +332,6 @@ function showImagePreview(imageData, fileName) {
       display:flex; align-items:center; justify-content:center;
     ">✕</button>
   `;
-
   const inputArea = document.querySelector(".input-area");
   inputArea.parentNode.insertBefore(preview, inputArea);
   chatBox.scrollTop = chatBox.scrollHeight;
@@ -340,26 +371,58 @@ async function sendMessage() {
   }
 
   removeWelcomeScreen();
-  // ✅ FIXED: Image preview chatbox mein dikhao aur input preview hatao
   addMessage(text, "user", false, selectedImage);
   removeImagePreview();
   input.value = "";
   input.style.height = "24px";
 
-  // ✅ NEW: Agar date/time pucha hai, AI ko call hi mat karo - seedha sahi jawab do
   if (!selectedImage) {
+    // Date/Time direct reply
     const directReply = getDirectDateTimeReply(text);
     if (directReply) {
       addMessage(directReply, "bot", true);
       return;
     }
 
-    // ✅ NEW: Live weather - real data, AI guess nahi karega
+    // Weather direct reply
     if (isWeatherQuery(text)) {
       showThinking();
       const weatherReply = await getDirectWeatherReply(text);
       removeThinking();
       addMessage(weatherReply, "bot", true);
+      return;
+    }
+
+    // ✅ NEW: Image Generation
+    if (isImageRequest(text)) {
+      const prompt = extractImagePrompt(text) || text;
+      showThinking();
+      const loadingMsg = document.createElement("div");
+      loadingMsg.className = "message bot";
+      loadingMsg.id = "imgLoadingMsg";
+      loadingMsg.innerHTML = `
+        <div class="bot-header">
+          <div class="bot-avatar">✨</div>
+          <div class="bot-name">Hurairah AI</div>
+        </div>
+        <div class="msg-text">🎨 Image bana raha hoon... thoda wait karo!</div>
+        <div class="time">${getTime()}</div>
+      `;
+      chatBox.appendChild(loadingMsg);
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      try {
+        const imageUrl = await generateImage(prompt);
+        removeThinking();
+        const oldMsg = document.getElementById("imgLoadingMsg");
+        if (oldMsg) oldMsg.remove();
+        addGeneratedImage(imageUrl, prompt);
+      } catch (err) {
+        removeThinking();
+        const oldMsg = document.getElementById("imgLoadingMsg");
+        if (oldMsg) oldMsg.remove();
+        addMessage("Image generate nahi ho payi 😔 Dobara try karo ya alag prompt likho.", "bot", true);
+      }
       return;
     }
   }
@@ -426,7 +489,6 @@ if (SpeechRecognition && micBtn) {
 
 attachBtn.addEventListener("click", () => imageInput.click());
 
-// ✅ FIXED: Image select hone pe preview dikhao, direct send mat karo
 imageInput.addEventListener("change", () => {
   const file = imageInput.files[0];
   if (!file) return;
@@ -448,8 +510,7 @@ document.getElementById("clearBtn").addEventListener("click", () => {
 });
 
 // =========================================================
-// ✅ NEW: Voice Chat Mode - hands-free continuous conversation
-// Bolo -> AI sune -> reply de -> bole -> phir se sune... (loop)
+// Voice Chat Mode
 // =========================================================
 let voiceModeActive = false;
 let voiceRecognitionInstance = null;
@@ -531,11 +592,10 @@ function injectVoiceModeStyles() {
 }
 
 function createVoiceModeUI() {
-  if (!SpeechRecognition) return; // browser support nahi hai to button hi mat dikhao
+  if (!SpeechRecognition) return;
 
   injectVoiceModeStyles();
 
-  // Voice mode toggle button - input area mein add karo
   const btn = document.createElement("button");
   btn.id = "voiceModeBtn";
   btn.className = "voice-mode-btn";
@@ -543,147 +603,7 @@ function createVoiceModeUI() {
   btn.innerHTML = "🎧";
   document.querySelector(".input-area").appendChild(btn);
 
-  // Full-screen overlay (call jaisa interface)
   const overlay = document.createElement("div");
   overlay.id = "voiceModeOverlay";
   overlay.className = "voice-mode-overlay";
-  overlay.innerHTML = `
-    <div class="voice-orb" id="voiceOrb">🎙️</div>
-    <div class="voice-status" id="voiceStatus">Sun rahi hu...</div>
-    <div class="voice-transcript" id="voiceTranscript"></div>
-    <button class="voice-exit-btn" id="voiceExitBtn">✕ Voice Mode Band Karo</button>
-  `;
-  document.body.appendChild(overlay);
-
-  btn.addEventListener("click", startVoiceMode);
-  document.getElementById("voiceExitBtn").addEventListener("click", stopVoiceMode);
-}
-
-function setVoiceStatus(state, label, transcript = "") {
-  const orb = document.getElementById("voiceOrb");
-  const status = document.getElementById("voiceStatus");
-  const transcriptEl = document.getElementById("voiceTranscript");
-  orb.className = "voice-orb " + state;
-  orb.textContent = state === "thinking" ? "✨" : state === "speaking" ? "🔊" : "🎙️";
-  status.textContent = label;
-  transcriptEl.textContent = transcript;
-}
-
-function startVoiceMode() {
-  voiceModeActive = true;
-  document.getElementById("voiceModeOverlay").style.display = "flex";
-  listenForVoiceInput();
-}
-
-function stopVoiceMode() {
-  voiceModeActive = false;
-  if (voiceRecognitionInstance) {
-    try { voiceRecognitionInstance.abort(); } catch (e) {}
-  }
-  speechSynthesis.cancel();
-  document.getElementById("voiceModeOverlay").style.display = "none";
-}
-
-function listenForVoiceInput() {
-  if (!voiceModeActive) return;
-  setVoiceStatus("listening", "Sun rahi hu... 🎙️", "");
-
-  voiceRecognitionInstance = new SpeechRecognition();
-  voiceRecognitionInstance.lang = "en-IN";
-  voiceRecognitionInstance.continuous = false;
-  voiceRecognitionInstance.interimResults = false;
-
-  voiceRecognitionInstance.onresult = async (event) => {
-    const transcript = event.results[0][0].transcript.trim();
-    if (!transcript) {
-      if (voiceModeActive) listenForVoiceInput();
-      return;
-    }
-    setVoiceStatus("thinking", "Soch rahi hu... ✨", `"${transcript}"`);
-    await handleVoiceMessage(transcript);
-  };
-
-  voiceRecognitionInstance.onerror = () => {
-    if (voiceModeActive) setTimeout(listenForVoiceInput, 800);
-  };
-
-  try { voiceRecognitionInstance.start(); } catch (e) { console.log(e); }
-}
-
-async function handleVoiceMessage(text) {
-  removeWelcomeScreen();
-  addMessage(text, "user");
-
-  let replyText;
-  const directReply = getDirectDateTimeReply(text);
-  if (directReply) {
-    replyText = directReply;
-  } else if (isWeatherQuery(text)) {
-    replyText = await getDirectWeatherReply(text);
-  } else {
-    try {
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, message: text, image: null, hurairahMode })
-      });
-      const data = await res.json();
-      replyText = data.reply || "Kuch samajh nahi aaya.";
-    } catch (err) {
-      replyText = "Connection mein problem aa rahi hai.";
-    }
-  }
-
-  addMessage(replyText, "bot", true);
-
-  if (!voiceModeActive) return;
-  setVoiceStatus("speaking", "Bol rahi hu... 🔊", "");
-  await speakForVoiceMode(replyText);
-
-  if (voiceModeActive) listenForVoiceInput();
-}
-
-function speakForVoiceMode(text) {
-  return new Promise((resolve) => {
-    fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
-      method: "POST",
-      headers: {
-        "xi-api-key": ELEVENLABS_API_KEY,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        text: text,
-        model_id: "eleven_turbo_v2_5",
-        voice_settings: {
-          stability: 0.4,
-          similarity_boost: 0.9,
-          style: 0.5,
-          use_speaker_boost: true
-        }
-      })
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("ElevenLabs error");
-        return res.blob();
-      })
-      .then((blob) => {
-        const audioUrl = URL.createObjectURL(blob);
-        const audio = new Audio(audioUrl);
-        audio.play();
-        audio.onended = () => {
-          URL.revokeObjectURL(audioUrl);
-          resolve();
-        };
-      })
-      .catch(() => {
-        const speech = new SpeechSynthesisUtterance(text);
-        speech.lang = "en-IN";
-        speech.rate = 1;
-        speech.onend = resolve;
-        speech.onerror = resolve;
-        speechSynthesis.speak(speech);
-      });
-  });
-}
-
-createVoiceModeUI();
+  overla
