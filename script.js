@@ -35,7 +35,7 @@ function chipClick(text) {
   sendMessage();
 }
 
-let messages = JSON.parse(localStorage.getItem("hurairah_chat") || "[]");
+let messages = JSON.parse(sessionStorage.getItem("hurairah_chat") || "[]");
 let hurairahMode = sessionStorage.getItem("hurairah_mode") === "true";
 
 const chatBox = document.getElementById("chatBox");
@@ -144,7 +144,6 @@ async function getDirectWeatherReply(text) {
   }
 }
 
-// ✅ NEW: Image Generation via Pollinations AI (Free, No API Key, 24/7)
 function isImageRequest(text) {
   const msg = text.toLowerCase();
   const keywords = [
@@ -195,7 +194,7 @@ function addGeneratedImage(imageUrl, prompt) {
   chatBox.appendChild(msg);
   chatBox.scrollTop = chatBox.scrollHeight;
   messages.push({ text: `[Image: ${prompt}]`, type: "bot" });
-  localStorage.setItem("hurairah_chat", JSON.stringify(messages));
+  sessionStorage.setItem("hurairah_chat", JSON.stringify(messages));
 }
 
 function removeWelcomeScreen() {
@@ -307,7 +306,7 @@ function addMessage(text, type, animate = false, imageData = null) {
 
   chatBox.scrollTop = chatBox.scrollHeight;
   messages.push({ text, type });
-  localStorage.setItem("hurairah_chat", JSON.stringify(messages));
+  sessionStorage.setItem("hurairah_chat", JSON.stringify(messages));
 }
 
 function showImagePreview(imageData, fileName) {
@@ -377,14 +376,12 @@ async function sendMessage() {
   input.style.height = "24px";
 
   if (!selectedImage) {
-    // Date/Time direct reply
     const directReply = getDirectDateTimeReply(text);
     if (directReply) {
       addMessage(directReply, "bot", true);
       return;
     }
 
-    // Weather direct reply
     if (isWeatherQuery(text)) {
       showThinking();
       const weatherReply = await getDirectWeatherReply(text);
@@ -393,7 +390,6 @@ async function sendMessage() {
       return;
     }
 
-    // ✅ NEW: Image Generation
     if (isImageRequest(text)) {
       const prompt = extractImagePrompt(text) || text;
       showThinking();
@@ -502,7 +498,7 @@ imageInput.addEventListener("change", () => {
 
 document.getElementById("clearBtn").addEventListener("click", () => {
   if (confirm("Chat delete karna chahte ho?")) {
-    localStorage.removeItem("hurairah_chat");
+    sessionStorage.removeItem("hurairah_chat");
     sessionStorage.removeItem("hurairah_mode");
     messages = [];
     location.reload();
@@ -606,4 +602,4 @@ function createVoiceModeUI() {
   const overlay = document.createElement("div");
   overlay.id = "voiceModeOverlay";
   overlay.className = "voice-mode-overlay";
-  overla
+      
