@@ -13,16 +13,49 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Hurairah AI">
 
+<style>
+  /* 🔥 Gemini/Claude Style Image Fixes */
+  .message.user img, .message.bot img {
+    max-width: 140px !important;
+    max-height: 140px !important;
+    object-fit: cover;
+    border-radius: 14px !important;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: block;
+    margin-bottom: 6px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+  
+  /* Input Area Adjustments for Headphone Button */
+  .input-area {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px;
+  }
+  .icon-btn {
+    font-size: 20px;
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #messageInput {
+    flex: 1;
+    resize: none;
+  }
+</style>
+
 <script>
-  // ✅ Service worker unregister + force fresh load
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.getRegistrations().then(regs => {
       regs.forEach(reg => reg.unregister());
     });
   }
-  // ❌ Force reload code hata diya gaya hai
 
-  // 🔥 PERMANENT CACHE FIX: CSS aur JS ko dynamic unique version ke sath load karna
   const cacheBusterVersion = new Date().getTime();
 
   // 1. Dynamic CSS Link
@@ -31,12 +64,76 @@
   cssLink.href = 'style.css?v=' + cacheBusterVersion;
   document.head.appendChild(cssLink);
 
-  // 2. Dynamic JS Script (Jo niche body ke baad load hota, use yahan se handle kiya hai)
+  // 2. Dynamic JS Script Loader + Real-Time Mic & Headphone Binding
   window.addEventListener('DOMContentLoaded', () => {
+    // Inject custom continuous real-time voice & preview rules into window context before script.js triggers
+    setupRealTimeMicAndHeadphone();
+
     const jsScript = document.createElement('script');
     jsScript.src = 'script.js?v=' + cacheBusterVersion;
     document.body.appendChild(jsScript);
   });
+
+  function setupRealTimeMicAndHeadphone() {
+    window.addEventListener('load', () => {
+      const micBtn = document.getElementById("micBtn");
+      const headphoneBtn = document.getElementById("headphoneBtn");
+      const input = document.getElementById("messageInput");
+      const popup = document.getElementById("recordingPopup");
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.lang = "en-IN";
+        recognition.continuous = false;
+        recognition.interimResults = true; // ✅ Enable live text streaming as you speak
+
+        if (micBtn) {
+          micBtn.addEventListener("click", () => {
+            try { 
+              recognition.start(); 
+              if (popup) popup.style.display = "flex";
+            } catch(e) {}
+          });
+        }
+
+        recognition.onresult = (event) => {
+          let transcript = "";
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript;
+          }
+          if (input) input.value = transcript; // Live streaming values into chat box text box
+        };
+
+        recognition.onend = () => {
+          if (popup) popup.style.display = "none";
+          // If text exists, trigger send immediately when user stops speaking
+          if (input && input.value.trim() !== "") {
+            const sendBtn = document.getElementById("sendBtn");
+            if (sendBtn) sendBtn.click();
+          }
+        };
+      }
+
+      // 🎧 Headphone Call Overlay Action Handler
+      if (headphoneBtn) {
+        headphoneBtn.addEventListener("click", () => {
+          alert("Voice Conversation Mode Active! 🎧 Ab aap AI ke responses direct sun sakte hain.");
+          // Trigger direct voice flow pipeline activation hook
+          if (micBtn) micBtn.click();
+        });
+      }
+    });
+  }
+
+  function chipClick(val) {
+    const input = document.getElementById("messageInput");
+    if(input) {
+      input.value = val;
+      const sendBtn = document.getElementById("sendBtn");
+      if (sendBtn) sendBtn.click();
+    }
+  }
 </script>
 </head>
 <body>
@@ -67,9 +164,9 @@
       <span>Hurairah AI</span>
     </div>
     <div class="topbar-right">
-  <a href="trialroom.html" style="text-decoration:none;font-size:24px;">
-    👕
-  </a>
+      <a href="trialroom.html" style="text-decoration:none;font-size:24px;">
+        👕
+      </a>
     </div>
   </div>
 
@@ -101,13 +198,13 @@
       </svg>
     </button>
     <button class="icon-btn" id="micBtn">🎙️</button>
+    <button class="icon-btn" id="headphoneBtn">🎧</button>
   </div>
 </div>
 
-<div id="recordingPopup" class="recording-popup">
+<div id="recordingPopup" class="recording-popup" style="display:none;">
   <span>🎤</span> Listening...
 </div>
 
-<!-- Note: Purana static script tag yahan se hata diya hai kyunki upar dynamic chal raha hai -->
 </body>
 </html>
