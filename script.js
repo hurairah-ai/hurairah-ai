@@ -3,7 +3,7 @@ const ELEVENLABS_API_KEY = "sk_ba5c973ec598f00b7293cc1f37675eb24f52363489ea82be"
 const ELEVENLABS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
 
 let username = localStorage.getItem("hurairah_username");
-let currentAudioInstance = null; // Global reference to stop ElevenLabs audio
+let currentAudioInstance = null;
 
 if (username) {
   document.getElementById("nameModal").style.display = "none";
@@ -71,7 +71,8 @@ if (messages.length > 0) {
         msgEl.innerHTML = `
           <div class="bot-header"><div class="bot-avatar">✨</div><div class="bot-name">Hurairah AI</div></div>
           <div class="msg-text" style="margin-bottom:8px;">Ye rahi teri image 🎨</div>
-          <img src="${imgUrl}" style="max-width:260px; width:100%; border-radius:14px; display:block; margin-top:4px;" />
+          <img src="${imgUrl}" alt="${rawPrompt}" onclick="window.open('${imgUrl}', '_blank')" style="max-width:260px; width:100%; border-radius:14px; display:block; margin-top:4px; cursor:pointer;" />
+          <button onclick="downloadImage('${imgUrl}')" style="display:inline-block; margin-top:8px; padding:6px 12px; background:#7c3aed; color:white; border:none; border-radius:8px; font-size:12px; cursor:pointer;">⬇️ Download Image</button>
         `;
       } else {
         msgEl.innerHTML = `
@@ -124,24 +125,27 @@ function isWeatherQuery(text) {
 }
 
 function extractCityName(text) {
-  const cleaned = text.replace(/[?.!]/g, "");
+  let msg = text.toLowerCase().replace(/[?.!]/g, "").trim();
   const patterns = [
     /weather\s+(?:in|of|for)\s+([a-zA-Z\s]+)/i,
-    /([a-zA-Z\s]+?)\s+(?:ka|ki|ke)\s+(?:weather|mausam|temperature|tapman)/i,
-    /([a-zA-Z\s]+?)\s+mein\s+(?:weather|mausam)/i,
-    /([a-zA-Z\s]+?)\s+(?:weather|mausam)/i
+    /([a-zA-Z\s]+?)\s+(?:ka|ki|ke)\s+(?:weather|mausam|temperature|tapman|barish|baarish)/i,
+    /([a-zA-Z\s]+?)\s+(?:mein|me)\s+(?:weather|mausam|temperature|tapman|barish|baarish)/i,
+    /(?:weather|mausam|temperature|tapman|barish|baarish)\s+(?:in|mein|me)\s+([a-zA-Z\s]+)/i
   ];
-  const STOPWORDS = ["today", "now", "abhi", "aaj", "kaisa", "kaisi", "hai", "please", "batao", "kya", "ka", "ki", "ke", "mein", "me", "mausam", "weather", "temperature", "tapman", "is", "the", "whats", "what", "tell", "current", "barish", "baarish"];
+
   for (const pattern of patterns) {
-    const match = cleaned.match(pattern);
+    const match = msg.match(pattern);
     if (match && match[1]) {
-      let words = match[1].trim().split(/\s+/);
-      while (words.length > 0 && STOPWORDS.includes(words[words.length - 1].toLowerCase())) words.pop();
-      while (words.length > 0 && STOPWORDS.includes(words[0].toLowerCase())) words.shift();
-      const city = words.join(" ");
-      if (city.length > 1) return city;
+      let city = match[1].trim();
+      if(city) return city;
     }
   }
+
+  const words = msg.split(/\s+/);
+  const STOPWORDS = ["today", "now", "abhi", "aaj", "kaisa", "kaisi", "hai", "please", "batao", "kya", "ka", "ki", "ke", "mein", "me", "mausam", "weather", "temperature", "tapman", "is", "the", "whats", "what", "tell", "current", "barish", "baarish", "hogi"];
+  let filtered = words.filter(w => !STOPWORDS.includes(w));
+  if (filtered.length > 0) return filtered[0]; 
+
   return null;
 }
 
@@ -157,8 +161,8 @@ function getWeatherDescription(code) {
 
 async function getDirectWeatherReply(text) {
   let city = extractCityName(text);
-  let lat = 18.5204; // Default Pune Latitude
-  let lon = 73.8567; // Default Pune Longitude
+  let lat = 18.5204; // Default Pune
+  let lon = 73.8567;
   let placeName = "Pune, India";
 
   if (city) {
@@ -171,11 +175,9 @@ async function getDirectWeatherReply(text) {
         lon = place.longitude;
         placeName = place.country ? `${place.name}, ${place.country}` : place.name;
       } else {
-        return `Mujhe "${city}" naam ka shehar nahi mila. Sahi spelling check karo.`;
+        placeName = city.charAt(0).toUpperCase() + city.slice(1);
       }
-    } catch (err) {
-      // Fallback directly to local default if geocoding server lags
-    }
+    } catch (err) {}
   }
 
   try {
@@ -184,7 +186,6 @@ async function getDirectWeatherReply(text) {
     const cw = weatherData.current_weather;
     const desc = getWeatherDescription(cw.weathercode);
     
-    // Custom Smart Rain Prediction Logic
     let rainAlert = "";
     if ([51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99].includes(cw.weathercode)) {
       rainAlert = " Haan bhai, aaj baarish ke poore chances hain ya baarish ho rahi hai, umbrella sath rakhna! 🌧️☔";
@@ -223,8 +224,8 @@ function addGeneratedImage(imageUrl, prompt) {
   msg.innerHTML = `
     <div class="bot-header"><div class="bot-avatar">✨</div><div class="bot-name">Hurairah AI</div></div>
     <div class="msg-text" style="margin-bottom:8px;">Ye rahi teri image 🎨</div>
-    <img src="${imageUrl}" alt="${prompt}" style="max-width:260px; width:100%; border-radius:14px; display:block; margin-top:4px;" loading="lazy" />
-    <a href="${imageUrl}" download="hurairah-ai-image.jpg" style="display:inline-block; margin-top:8px; font-size:12px; color:#a78bfa; text-decoration:none;">⬇️ Download</a>
+    <img src="${imageUrl}" alt="${prompt}" onclick="window.open('${imageUrl}', '_blank')" style="max-width:260px; width:100%; border-radius:14px; display:block; margin-top:4px; cursor:pointer;" loading="lazy" />
+    <button onclick="downloadImage('${imageUrl}')" style="display:inline-block; margin-top:8px; padding:6px 12px; background:#7c3aed; color:white; border:none; border-radius:8px; font-size:12px; cursor:pointer;">⬇️ Download Image</button>
     <div class="time">${getTime()}</div>
   `;
   chatBox.appendChild(msg);
@@ -233,29 +234,38 @@ function addGeneratedImage(imageUrl, prompt) {
   localStorage.setItem("hurairah_chat", JSON.stringify(messages));
 }
 
+async function downloadImage(url) {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'hurairah-ai-image.jpg';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (err) {
+    alert("Download fail hua, aap image par tap karke full screen open karke bhi long press se save kar sakte ho!");
+  }
+}
+
 function removeWelcomeScreen() {
   const welcome = document.querySelector(".welcome-screen");
   if (welcome) { welcome.style.opacity = "0"; setTimeout(() => welcome.remove(), 300); }
 }
 
 function stopAllAudio(speakBtn, stopBtn) {
-  if (currentAudioInstance) {
-    currentAudioInstance.pause();
-    currentAudioInstance.currentTime = 0;
-  }
-  if (window.speechSynthesis) {
-    window.speechSynthesis.cancel();
-  }
+  if (currentAudioInstance) { currentAudioInstance.pause(); currentAudioInstance.currentTime = 0; }
+  if (window.speechSynthesis) { window.speechSynthesis.cancel(); }
   if(speakBtn) speakBtn.textContent = "🔊 Suno";
   if(stopBtn) stopBtn.style.display = "none";
 }
 
 async function speakWithElevenLabs(text, btn, stopBtn) {
-  stopAllAudio(null, null); // Stop any currently playing speech before initiating a new one
-  
+  stopAllAudio(null, null);
   try {
     if(btn) btn.textContent = "⏳ Loading...";
-    if(stopBtn) stopBtn.style.display = "inline-block"; // Show Stop button instantly
+    if(stopBtn) stopBtn.style.display = "inline-block";
 
     const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
       method: "POST",
@@ -268,8 +278,8 @@ async function speakWithElevenLabs(text, btn, stopBtn) {
     
     currentAudioInstance = new Audio(audioUrl);
     if(btn) btn.textContent = "🎙️ Bol raha..";
-    
     currentAudioInstance.play();
+    
     return new Promise((resolve) => {
       currentAudioInstance.onended = () => {
         URL.revokeObjectURL(audioUrl);
@@ -277,27 +287,15 @@ async function speakWithElevenLabs(text, btn, stopBtn) {
         if(stopBtn) stopBtn.style.display = "none";
         resolve();
       };
-      currentAudioInstance.onerror = () => {
-        if(stopBtn) stopBtn.style.display = "none";
-        resolve();
-      };
+      currentAudioInstance.onerror = () => { if(stopBtn) stopBtn.style.display = "none"; resolve(); };
     });
   } catch (err) {
     if(btn) btn.textContent = "🎙️ Bol raha..";
     return new Promise((resolve) => {
-      const speech = new SpeechSynthesisUtterance(text); 
-      speech.lang = "en-IN"; 
-      speech.rate = 1;
+      const speech = new SpeechSynthesisUtterance(text); speech.lang = "en-IN"; speech.rate = 1;
       window.speechSynthesis.speak(speech);
-      speech.onend = () => {
-        if(btn) btn.textContent = "🔊 Suno";
-        if(stopBtn) stopBtn.style.display = "none";
-        resolve();
-      };
-      speech.onerror = () => {
-        if(stopBtn) stopBtn.style.display = "none";
-        resolve();
-      };
+      speech.onend = () => { if(btn) btn.textContent = "🔊 Suno"; if(stopBtn) stopBtn.style.display = "none"; resolve(); };
+      speech.onerror = () => { if(stopBtn) stopBtn.style.display = "none"; resolve(); };
     });
   }
 }
@@ -334,9 +332,7 @@ function addMessage(text, type, animate = false, imageData = null) {
     const interval = setInterval(() => {
       if (i < text.length) { cursor.insertAdjacentText("beforebegin", text[i]); i++; chatBox.scrollTop = chatBox.scrollHeight; } 
       else { 
-        clearInterval(interval); 
-        cursor.remove(); 
-        speakBtn.style.display = "inline-block"; 
+        clearInterval(interval); cursor.remove(); speakBtn.style.display = "inline-block"; 
         speakBtn.addEventListener("click", () => speakWithElevenLabs(text, speakBtn, stopBtn)); 
         stopBtn.addEventListener("click", () => stopAllAudio(speakBtn, stopBtn));
       }
@@ -546,7 +542,6 @@ function createVoiceModeUI() {
 
     orb.className = "voice-orb speaking"; statusText.textContent = "Hurairah AI bol raha hai...";
     
-    // Create temporary buttons for voice interface synchronization
     const mockSpeakBtn = { textContent: "" };
     const mockStopBtn = { style: { display: "none" } };
     await speakWithElevenLabs(botText, mockSpeakBtn, mockStopBtn);
