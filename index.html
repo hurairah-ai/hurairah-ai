@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-title" content="Hurairah AI">
 
 <style>
-  /* 📊 Global CSS Style Overrides for Clean Layout */
+  /* 📊 Global Chat Structural Wrapper Layout */
   .app {
     display: flex;
     flex-direction: column;
@@ -22,9 +22,16 @@
     max-width: 600px;
     margin: 0 auto;
     position: relative;
+    background: #09090e;
   }
 
-  /* 🔥 Gemini/Claude Style Standard Image Sizes for Chat History */
+  .chat-box {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+  }
+
+  /* 🔥 Gemini/Claude Style Standard Chat History Image Renderers */
   .message.user img, .message.bot img {
     max-width: 140px !important;
     max-height: 140px !important;
@@ -34,28 +41,29 @@
     border-radius: 14px !important;
     display: block !important;
     margin-bottom: 6px !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
   }
 
-  /* 🖼️ ChatGPT Style Tiny Image Preview Thumbnail inside Input Section */
+  /* 🖼️ Fixed Embedded Dynamic Preview Area Layout Constraints */
   #imagePreviewContainer {
     display: flex !important;
-    padding: 6px 14px !important;
-    background: transparent !important;
-    width: auto !important;
-    height: auto !important;
+    padding: 8px 14px !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.05) !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
   .thumb-wrap {
     position: relative !important;
     display: inline-block !important;
-    width: 80px !important;
-    height: 80px !important;
+    width: 75px !important;
+    height: 75px !important;
   }
   .thumb-wrap img {
-    width: 80px !important;
-    height: 80px !important;
-    max-width: 80px !important;
-    max-height: 80px !important;
+    width: 75px !important;
+    height: 75px !important;
+    max-width: 75px !important;
+    max-height: 75px !important;
     object-fit: cover !important;
     border-radius: 12px !important;
     border: 2px solid #7c3aed !important;
@@ -76,15 +84,17 @@
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    z-index: 999 !important;
+    z-index: 9999 !important;
   }
 
-  /* Input area row flex balancing structural setup */
+  /* Footer Controls Row Alignment Settings */
   .input-area {
     display: flex !important;
     align-items: center !important;
     gap: 8px !important;
     padding: 10px !important;
+    background: #111118;
+    border-top: 1px solid rgba(255,255,255,0.05);
   }
   .icon-btn {
     font-size: 22px !important;
@@ -93,14 +103,21 @@
     border: none !important;
     display: flex !important;
     align-items: center !important;
-    justify-content: center !important;
+    justify-content: center;
+    color: white;
   }
   #messageInput {
     flex: 1 !important;
     resize: none !important;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px;
+    padding: 8px 14px;
+    color: white;
+    outline: none;
   }
 
-  /* 🎧 Premium Voice Call Fullscreen Overlay Screen Styling */
+  /* 🎧 Voice Room Fullscreen Display Setup */
   .voice-overlay {
     position: fixed;
     top: 0; left: 0; width: 100vw; height: 100vh;
@@ -114,39 +131,15 @@
     color: white;
     font-family: sans-serif;
   }
-  .voice-status-wrap {
-    text-align: center;
-    margin-top: 40px;
-  }
-  .voice-status {
-    font-size: 24px;
-    font-weight: bold;
-    color: #ff85a2;
-    text-shadow: 0 0 10px rgba(255, 64, 129, 0.5);
-    margin-top: 10px;
-  }
-  .voice-wave-container {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    height: 150px;
-  }
-  .wave-bar {
-    width: 6px;
-    height: 20px;
-    background: linear-gradient(to top, #7c3aed, #ff4081);
-    border-radius: 4px;
-    animation: calmWave 1s infinite ease-in-out;
-  }
-  .wave-bar.active {
-    animation: activeVoice 0.6s infinite alternate ease-in-out;
-  }
+  .voice-status-wrap { text-align: center; margin-top: 40px; }
+  .voice-status { font-size: 24px; font-weight: bold; color: #ff85a2; text-shadow: 0 0 10px rgba(255, 64, 129, 0.5); margin-top: 10px; }
+  .voice-wave-container { display: flex; align-items: center; justify-content: center; gap: 8px; height: 150px; }
+  .wave-bar { width: 6px; height: 20px; background: linear-gradient(to top, #7c3aed, #ff4081); border-radius: 4px; animation: calmWave 1s infinite ease-in-out; }
+  .wave-bar.active { animation: activeVoice 0.6s infinite alternate ease-in-out; }
   .wave-bar:nth-child(2) { animation-delay: 0.1s; }
   .wave-bar:nth-child(3) { animation-delay: 0.2s; }
   .wave-bar:nth-child(4) { animation-delay: 0.3s; }
   .wave-bar:nth-child(5) { animation-delay: 0.4s; }
-
   @keyframes calmWave { 0%, 100% { height: 15px; } 50% { height: 35px; } }
   @keyframes activeVoice { 0% { height: 20px; } 100% { height: 110px; } }
   
@@ -166,7 +159,6 @@
 </style>
 
 <script>
-  // Dynamic cache buster loading system for main style sheet tracking nodes
   const cacheBusterVersion = new Date().getTime();
   const cssLink = document.createElement('link');
   cssLink.rel = 'stylesheet';
@@ -176,7 +168,6 @@
 </head>
 <body>
 
-<!-- 🎧 Voice Call Fullscreen Overlay Screen Interface Block -->
 <div id="voiceOverlay" class="voice-overlay">
   <div class="voice-status-wrap">
     <h2>Hurairah Voice Room</h2>
@@ -192,44 +183,30 @@
   <button id="closeVoiceBtn" class="close-voice-btn">End Call 📞</button>
 </div>
 
-<!-- Username Entry Dialog Overlay -->
 <div id="nameModal" class="name-modal-overlay">
   <div class="name-modal-box">
     <div class="name-modal-glow"></div>
-    <div class="name-modal-logo">
-      <img src="logo.png" alt="Logo">
-    </div>
+    <div class="name-modal-logo"><img src="logo.png" alt="Logo"></div>
     <h2>Hurairah AI</h2>
     <p>Apna naam likho shuru karne ke liye</p>
     <div class="name-input-wrap">
       <input type="text" id="nameInput" placeholder="Tumhara naam..." maxlength="30" autocomplete="off" />
     </div>
-    <button id="nameSubmitBtn">
-      <span>Shuru Karo</span>
-      <span>→</span>
-    </button>
+    <button id="nameSubmitBtn"><span>Shuru Karo</span><span>→</span></button>
   </div>
 </div>
 
 <div class="app">
   <div class="topbar">
     <button id="clearBtn">🗑️</button>
-    <div class="brand">
-      <span class="brand-icon">✨</span>
-      <span>Hurairah AI</span>
-    </div>
-    <div class="topbar-right">
-      <a href="trialroom.html" style="text-decoration:none;font-size:24px;">👕</a>
-    </div>
+    <div class="brand"><span class="brand-icon">✨</span><span>Hurairah AI</span></div>
+    <div class="topbar-right"><a href="trialroom.html" style="text-decoration:none;font-size:24px;">👕</a></div>
   </div>
 
   <div id="chatBox" class="chat-box">
     <div class="welcome-screen">
       <div class="online-badge">🟢 Online</div>
-      <div class="logo-wrap">
-        <img src="logo.png" alt="Hurairah AI">
-        <div class="logo-ring"></div>
-      </div>
+      <div class="logo-wrap"><img src="logo.png" alt="Hurairah AI"><div class="logo-ring"></div></div>
       <h1>Hello! 👋</h1>
       <h2>I'm Hurairah AI</h2>
       <p>How can I help you today?</p>
@@ -241,14 +218,14 @@
     </div>
   </div>
 
-  <!-- Container for Image Preview Thumbnail -->
+  <!-- FIXED CONTAINER: Ab ye hamesha chat-box ke niche aur input area ke theek upar bandha rahega -->
   <div id="imagePreviewContainer"></div>
 
   <div class="input-area">
     <button class="icon-btn" id="attachBtn">📎</button>
     <input type="file" id="imageInput" accept="image/*" hidden>
     <textarea id="messageInput" placeholder="Message likho..." rows="1"></textarea>
-    <button id="sendBtn">
+    <button id="sendBtn" class="icon-btn">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
         <path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>
       </svg>
@@ -258,16 +235,16 @@
   </div>
 </div>
 
-<div id="recordingPopup" class="recording-popup" style="display:none;">
-  <span>🎤</span> Listening...
-</div>
+<div id="recordingPopup" class="recording-popup" style="display:none;"><span>🎤</span> Listening...</div>
 
-<!-- 🔥 MASTER JAVASCRIPT LOGIC CORE ENGINE (Binds mic typing, preview limits, and headphone modes) -->
 <script>
 const API_URL = "https://hurairah-ai.annu8857818.workers.dev";
+const ELEVENLABS_API_KEY = "sk_ba5c973ec598f00b7293cc1f37675eb24f52363489ea82be";
+const ELEVENLABS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
 
 let username = localStorage.getItem("hurairah_username");
 let selectedImage = null;
+let currentAudioInstance = null;
 
 const chatBox = document.getElementById("chatBox");
 const input = document.getElementById("messageInput");
@@ -299,6 +276,41 @@ if (nameSubmitBtn) {
 let messages = JSON.parse(localStorage.getItem("hurairah_chat") || "[]");
 let hurairahMode = sessionStorage.getItem("hurairah_mode") === "true";
 
+function stopAllAudio(speakBtn, stopBtn) {
+  if (currentAudioInstance) { currentAudioInstance.pause(); currentAudioInstance.currentTime = 0; }
+  if (window.speechSynthesis) { window.speechSynthesis.cancel(); }
+  if (speakBtn) speakBtn.textContent = "🔊 Suno";
+  if (stopBtn) stopBtn.style.display = "none";
+}
+
+async function speakWithElevenLabs(text, btn, stopBtn) {
+  stopAllAudio(null, null);
+  try {
+    if (btn) btn.textContent = "⏳ Loading...";
+    if (stopBtn) stopBtn.style.display = "inline-block";
+    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
+      method: "POST",
+      headers: { "xi-api-key": ELEVENLABS_API_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ text: text, model_id: "eleven_turbo_v2_5", voice_settings: { stability: 0.4, similarity_boost: 0.9 } })
+    });
+    if (!res.ok) throw new Error();
+    const blob = await res.blob();
+    const audioUrl = URL.createObjectURL(blob);
+    currentAudioInstance = new Audio(audioUrl);
+    if (btn) btn.textContent = "🎙️ Bol raha..";
+    currentAudioInstance.play();
+    currentAudioInstance.onended = () => {
+      if (btn) btn.textContent = "🔊 Suno";
+      if (stopBtn) stopBtn.style.display = "none";
+    };
+  } catch (err) {
+    if (btn) btn.textContent = "🎙️ Bol raha..";
+    const speech = new SpeechSynthesisUtterance(text); speech.lang = "en-IN";
+    window.speechSynthesis.speak(speech);
+    speech.onend = () => { if (btn) btn.textContent = "🔊 Suno"; if (stopBtn) stopBtn.style.display = "none"; };
+  }
+}
+
 function addMessage(text, type, imgData = null) {
   const msg = document.createElement("div");
   msg.className = `message ${type}`;
@@ -308,8 +320,16 @@ function addMessage(text, type, imgData = null) {
     msg.innerHTML = `
       <div class="bot-header"><div class="bot-avatar">✨</div><div class="bot-name">Hurairah AI</div></div>
       <div class="msg-text">${text}</div>
+      <div class="audio-controls-row" style="display:flex; gap:6px; margin-top:6px;">
+        <button class="speak-btn" style="padding:4px 10px; background:#7c3aed; color:white; border:none; border-radius:6px; font-size:12px; cursor:pointer;">🔊 Suno</button>
+        <button class="stop-audio-btn" style="display:none; padding:4px 10px; background:#ef4444; color:white; border:none; border-radius:6px; font-size:12px; cursor:pointer;">🛑 Roko</button>
+      </div>
       <div class="time">${getTime()}</div>
     `;
+    const sBtn = msg.querySelector(".speak-btn");
+    const stBtn = msg.querySelector(".stop-audio-btn");
+    sBtn.addEventListener("click", () => speakWithElevenLabs(text, sBtn, stBtn));
+    stBtn.addEventListener("click", () => stopAllAudio(sBtn, stBtn));
   } else {
     msg.innerHTML = `${imageHTML} ${text ? `<div class="msg-text">${text}</div>` : ""} <div class="time">${getTime()}</div>`;
   }
@@ -330,7 +350,7 @@ function showThinking() {
 }
 function removeThinking() { const t = document.getElementById("thinking"); if (t) t.remove(); }
 
-// 🖼️ Gallery Preview Pipeline (Locked to 80px CSS rule bounds)
+// Gallery Preview Core
 if(attachBtn && imageInput) {
   attachBtn.addEventListener("click", () => imageInput.click());
   imageInput.addEventListener("change", () => {
@@ -356,7 +376,7 @@ if(attachBtn && imageInput) {
   });
 }
 
-// 🎙️ Mic Interim Results System (Real-Time Live Screen Character Rendering)
+// Mic System
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (SpeechRecognition && micBtn) {
   const recognition = new SpeechRecognition();
@@ -381,7 +401,7 @@ if (SpeechRecognition && micBtn) {
   };
 }
 
-// 🎧 Continuous Headphone Voice Call Loop Mode Handler Node
+// Continuous Voice Room (Headphone Engine Mode)
 if (SpeechRecognition) {
   const headphoneBtn = document.getElementById("headphoneBtn");
   const overlay = document.getElementById("voiceOverlay");
