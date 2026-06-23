@@ -569,9 +569,13 @@ function injectVoiceModeStyles() {
 }
 
 function createVoiceModeUI() {
+  if (document.getElementById("voiceModeBtn")) return;
+
   if (!SpeechRecognition) {
-      if(document.getElementById("micBtn")) document.getElementById("micBtn").style.display = "none";
-      return;
+    if (document.getElementById("micBtn")) {
+      document.getElementById("micBtn").style.display = "none";
+    }
+    return;
   }
 
   injectVoiceModeStyles();
@@ -582,7 +586,11 @@ function createVoiceModeUI() {
   btn.className = "voice-mode-btn";
   btn.title = "Voice Chat Mode";
   btn.innerHTML = "🎧";
-  document.querySelector(".input-area").appendChild(btn);
+  
+  const inputArea = document.querySelector(".input-area");
+  if(inputArea) {
+      inputArea.appendChild(btn);
+  }
 
   // Create Full-Screen Overlay
   const overlay = document.createElement("div");
@@ -598,11 +606,38 @@ function createVoiceModeUI() {
   
   document.body.appendChild(overlay);
 
-  const orb = document.getElementById("voiceOrb");
-  const statusText = document.getElementById("voiceStatus");
   const transcriptText = document.getElementById("voiceTranscript");
   const exitBtn = document.getElementById("voiceExitBtn");
 
   const recognition = new SpeechRecognition();
   recognition.lang = "en-IN";
-  re
+
+  btn.addEventListener("click", () => {
+    overlay.style.display = "flex";
+    transcriptText.textContent = "";
+    recognition.start();
+  });
+
+  exitBtn.addEventListener("click", () => {
+    overlay.style.display = "none";
+    recognition.stop();
+  });
+
+  recognition.onresult = (event) => {
+    const text = event.results[0][0].transcript;
+    transcriptText.textContent = text;
+    input.value = text;
+    overlay.style.display = "none";
+    sendMessage();
+  };
+
+  recognition.onerror = () => {
+    overlay.style.display = "none";
+  };
+
+  recognition.onend = () => {
+    overlay.style.display = "none";
+  };
+}
+
+createVoiceModeUI();
