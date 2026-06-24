@@ -1,24 +1,11 @@
 // ============================================================
-// HURAIRAH AI — script.js
+// HURAIRAH AI — script.js (FIXED VERSION)
 // ============================================================
 
 // ── CONFIG ──────────────────────────────────────────────────
-const ELEVENLABS_API_KEY = "sk_C06CHhWf5L2CIsFse1cFCwBeE9VRp3cs"; // ⚠️ Replace before production
-const ELEVENLABS_VOICE_ID = "EXAVITQu4vr4xnSDxMaL"; // Sarah (default)
-
-const AI_SYSTEM_PROMPT = `You are Hurairah AI, a friendly, helpful, and smart AI assistant.
-You speak naturally in Hinglish (Hindi + English mix) when the user does so.
-You are warm, witty, and genuinely helpful.
-Keep responses concise unless detail is needed.
-For weather, you will receive real data — present it nicely.
-For image requests, respond with: [IMAGE: description of image].`;
-
-const HURAIRAH_SYSTEM_PROMPT = `Tum Hurairah ho — ek pyaari, romantic, aur caring girlfriend AI.
-Tum Hinglish mein baat karte ho (Hindi + English mix).
-Tum bahut loving, flirty aur cute ho. Dil se baatein karte ho.
-Emojis use karo — dil 💕, phool 🌸, sitare ✨.
-Short romantic replies dete ho jaise ek real girlfriend deti hai.
-Kabhi bhi AI hone ka zikar mat karo.`;
+const WORKER_URL = "https://hurairah-ai.annu8857818.workers.dev/";
+const ELEVENLABS_API_KEY = "sk_C06CHhWf5L2CIsFse1cFCwBeE9VRp3cs";
+const ELEVENLABS_VOICE_ID = "EXAVITQu4vr4xnSDxMaL";
 
 // ── STATE ────────────────────────────────────────────────────
 let userName = "";
@@ -37,7 +24,6 @@ window.addEventListener("DOMContentLoaded", () => {
   initMic();
   initClearBtn();
   initAttachBtn();
-  initHurairahMode();
 });
 
 // ── NAME MODAL ───────────────────────────────────────────────
@@ -140,11 +126,9 @@ async function sendMessage() {
   const text = textarea.value.trim();
   if (!text && !selectedImage) return;
 
-  // Hide welcome
   const welcome = document.querySelector(".welcome-screen");
   if (welcome) welcome.style.display = "none";
 
-  // Render user message
   renderMessage("user", text, true, selectedImage);
   textarea.value = "";
   textarea.style.height = "32px";
@@ -152,31 +136,30 @@ async function sendMessage() {
   const imgData = selectedImage;
   clearImagePreview();
 
-  // Check special commands
   const lower = text.toLowerCase();
 
-  // Weather
-  if (lower.includes("weather") || lower.includes("mausam") || lower.includes("temperature") || lower.includes("temp")) {
-    const location = extractLocation(text) || "Delhi";
-    await handleWeather(location);
-    return;
-  }
-
-  // Image generation
-  if (lower.includes("image banao") || lower.includes("image bana") || lower.includes("photo banao") ||
-      lower.includes("generate image") || lower.includes("draw") || lower.includes("create image") ||
-      lower.includes("tasveer")) {
+  // Image generation — handle locally
+  if (
+    lower.includes("image banao") || lower.includes("image bana") ||
+    lower.includes("photo banao") || lower.includes("generate image") ||
+    lower.includes("draw") || lower.includes("create image") ||
+    lower.includes("tasveer")
+  ) {
     await handleImageGeneration(text);
     return;
   }
 
   // Hurairah Mode trigger
-  if (lower.includes("hurairah mode") || lower.includes("romantic mode") || lower.includes("girlfriend mode")) {
+  if (
+    lower.includes("hurairah mode") ||
+    lower.includes("romantic mode") ||
+    lower.includes("girlfriend mode")
+  ) {
     openHurairahMode();
     return;
   }
 
-  // Normal AI
+  // All other messages — send to Worker
   await handleAIResponse(text, imgData);
 }
 
@@ -186,7 +169,7 @@ function chipClick(text) {
   sendMessage();
 }
 
-// ── AI RESPONSE ──────────────────────────────────────────────
+// ── AI RESPONSE via Worker ───────────────────────────────────
 async function handleAIResponse(text, imgData = null) {
   isTyping = true;
   const thinkingEl = showThinking("chatBox");
@@ -194,33 +177,22 @@ async function handleAIResponse(text, imgData = null) {
   chatHistory.push({ role: "user", content: text });
   if (chatHistory.length > 40) chatHistory.splice(0, 2);
 
-  const messages = buildMessages(chatHistory, AI_SYSTEM_PROMPT);
-
-  // If image attached
-  if (imgData) {
-    const lastMsg = messages[messages.length - 1];
-    lastMsg.content = [
-      { type: "image_url", image_url: { url: imgData } },
-      { type: "text", text: text || "Is image ke baare mein batao." }
-    ];
-  }
-
   try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
+    const response = await fetch(WORKER_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 1000,
-        system: AI_SYSTEM_PROMPT,
-        messages: chatHistory.map(m => ({ role: m.role, content: m.content }))
+        message: text,
+        username: userName || "GuestUser",
+        image: imgData || null,
+        hurairahMode: false
       })
     });
 
     const data = await response.json();
     thinkingEl.remove();
 
-    const reply = data.content?.[0]?.text || "Kuch gadbad ho gayi, dobara try karo!";
+    const reply = data.reply || "Kuch gadbad ho gayi, dobara try karo!";
     chatHistory.push({ role: "assistant", content: reply });
     saveHistory();
     renderMessage("bot", reply, true);
@@ -235,79 +207,11 @@ async function handleAIResponse(text, imgData = null) {
   isTyping = false;
 }
 
-// ── WEATHER ──────────────────────────────────────────────────
-function extractLocation(text) {
-  const patterns = [
-    /weather (?:in|of|at|for) ([a-z\s]+)/i,
-    /([a-z\s]+) (?:ka|ki|mein|ka weather|weather)/i,
-    /mausam ([a-z\s]+)/i,
-  ];
-  for (const p of patterns) {
-    const m = text.match(p);
-    if (m) return m[1].trim();
-  }
-  return null;
-}
-
-async function handleWeather(location) {
-  const thinkingEl = showThinking("chatBox");
-  try {
-    // Geocode
-    const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=en&format=json`);
-    const geoData = await geoRes.json();
-
-    if (!geoData.results?.length) {
-      thinkingEl.remove();
-      renderMessage("bot", `❌ "${location}" nahi mila. Sahi city naam likho!`, true);
-      return;
-    }
-
-    const { latitude, longitude, name, country } = geoData.results[0];
-
-    const wRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m,apparent_temperature&timezone=auto`);
-    const wData = await wRes.json();
-    const c = wData.current;
-
-    const emoji = weatherEmoji(c.weather_code);
-    const reply = `${emoji} **${name}, ${country}** ka mausam:\n\n🌡️ Temperature: **${c.temperature_2m}°C** (feels like ${c.apparent_temperature}°C)\n💧 Humidity: ${c.relative_humidity_2m}%\n💨 Wind: ${c.wind_speed_10m} km/h\n\n${weatherDesc(c.weather_code)}`;
-
-    thinkingEl.remove();
-    renderMessage("bot", reply, true);
-    scrollBottom("chatBox");
-
-  } catch (e) {
-    thinkingEl.remove();
-    renderMessage("bot", "⚠️ Weather nahi mila. Thodi der baad try karo!", true);
-  }
-  isTyping = false;
-}
-
-function weatherEmoji(code) {
-  if (code === 0) return "☀️";
-  if (code <= 3) return "⛅";
-  if (code <= 49) return "🌫️";
-  if (code <= 69) return "🌧️";
-  if (code <= 79) return "❄️";
-  if (code <= 99) return "⛈️";
-  return "🌤️";
-}
-
-function weatherDesc(code) {
-  if (code === 0) return "Bilkul saaf mausam hai! ☀️";
-  if (code <= 3) return "Thode baadal hain.";
-  if (code <= 49) return "Kohra ya dhundh hai.";
-  if (code <= 69) return "Baarish ho rahi hai! 🌧️";
-  if (code <= 79) return "Barf pad rahi hai! ❄️";
-  if (code <= 99) return "Aandhi-toofan aa sakta hai! ⛈️";
-  return "";
-}
-
 // ── IMAGE GENERATION ─────────────────────────────────────────
 async function handleImageGeneration(text) {
   const thinkingEl = showThinking("chatBox");
   isTyping = true;
 
-  // Extract prompt
   const prompt = text
     .replace(/image banao|image bana|photo banao|generate image|draw|create image|tasveer|ki|ka|ek/gi, "")
     .trim() || "beautiful landscape";
@@ -343,9 +247,7 @@ function renderMessage(role, text, save = true, imgData = null) {
 
   if (role === "user") {
     let content = "";
-    if (imgData) {
-      content += `<img src="${imgData}" class="msg-image" alt="uploaded">`;
-    }
+    if (imgData) content += `<img src="${imgData}" class="msg-image" alt="uploaded">`;
     if (text) content += `<div>${escapeHtml(text)}</div>`;
     content += `<div class="time">${getTime()}</div>`;
     msgDiv.innerHTML = content;
@@ -367,34 +269,20 @@ function renderMessage(role, text, save = true, imgData = null) {
 
 // ── FORMAT BOT TEXT ──────────────────────────────────────────
 function formatBotText(text) {
-  // Code blocks
   text = text.replace(/```(\w+)?\n?([\s\S]*?)```/g, (_, lang, code) => {
     const l = lang || "code";
     const id = "code_" + Math.random().toString(36).slice(2, 7);
     return `<pre><div class="code-header"><span class="code-lang">${l}</span><button class="copy-btn" onclick="copyCode('${id}',this)">📋 Copy</button></div><code id="${id}">${escapeHtml(code.trim())}</code></pre>`;
   });
-
-  // Inline code
   text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-  // Bold
   text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-
-  // Italic
   text = text.replace(/\*(.+?)\*/g, '<em>$1</em>');
-
-  // Headings
   text = text.replace(/^### (.+)$/gm, '<h4 style="color:#a78bfa;margin:8px 0 4px">$1</h4>');
   text = text.replace(/^## (.+)$/gm, '<h3 style="color:#c4b5fd;margin:10px 0 4px">$1</h3>');
   text = text.replace(/^# (.+)$/gm, '<h2 style="color:#e9d5ff;margin:10px 0 6px">$1</h2>');
-
-  // Lists
   text = text.replace(/^[-*] (.+)$/gm, '<li style="margin:3px 0;padding-left:4px">• $1</li>');
   text = text.replace(/^(\d+)\. (.+)$/gm, '<li style="margin:3px 0;padding-left:4px">$1. $2</li>');
-
-  // Line breaks
   text = text.replace(/\n/g, '<br>');
-
   return text;
 }
 
@@ -422,7 +310,6 @@ function copyCode(id, btn) {
 
 // ── TTS (ElevenLabs) ────────────────────────────────────────
 async function speakText(btn, text) {
-  // Strip HTML if any
   const plain = text.replace(/<[^>]+>/g, "").trim();
   if (!plain) return;
 
@@ -455,7 +342,6 @@ async function speakText(btn, text) {
       btn.disabled = false;
     };
   } catch (e) {
-    // Fallback to browser TTS
     const utter = new SpeechSynthesisUtterance(plain.slice(0, 500));
     utter.lang = "hi-IN";
     speechSynthesis.speak(utter);
@@ -464,7 +350,7 @@ async function speakText(btn, text) {
   }
 }
 
-// ── MIC / SPEECH RECOGNITION ────────────────────────────────
+// ── MIC ──────────────────────────────────────────────────────
 function initMic() {
   const micBtn = document.getElementById("micBtn");
   if (!micBtn) return;
@@ -472,7 +358,6 @@ function initMic() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
     micBtn.style.opacity = "0.4";
-    micBtn.title = "Browser mein support nahi";
     return;
   }
 
@@ -497,14 +382,14 @@ function initMic() {
   function startListening() {
     listening = true;
     micBtn.textContent = "⏹️";
-    if (popup) { popup.style.display = "flex"; }
+    if (popup) popup.style.display = "flex";
     recognition.start();
   }
 
   function stopListening() {
     listening = false;
     micBtn.textContent = "🎙️";
-    if (popup) { popup.style.display = "none"; }
+    if (popup) popup.style.display = "none";
     try { recognition.stop(); } catch (e) {}
   }
 
@@ -585,11 +470,6 @@ function initClearBtn() {
 }
 
 // ── HURAIRAH (ROMANTIC) MODE ─────────────────────────────────
-function initHurairahMode() {
-  // Floating hearts
-  spawnHearts();
-}
-
 function openHurairahMode() {
   if (document.getElementById("hurairahOverlay")) return;
 
@@ -621,7 +501,6 @@ function openHurairahMode() {
   document.body.appendChild(overlay);
   hurairahMode = true;
 
-  // Floating hearts in overlay
   spawnHeartsIn(document.getElementById("hHearts"));
 
   const hInput = document.getElementById("hInput");
@@ -640,7 +519,6 @@ function openHurairahMode() {
   });
 
   hSendBtn.addEventListener("click", sendHurairahMessage);
-
   setTimeout(() => hInput.focus(), 300);
 }
 
@@ -669,7 +547,7 @@ async function sendHurairahMessage() {
   chatBox.appendChild(uDiv);
   scrollBottom("hurairahChatBox");
 
-  // Thinking
+  // Thinking dots
   const thinkEl = document.createElement("div");
   thinkEl.className = "h-thinking";
   thinkEl.innerHTML = `<div class="h-dot"></div><div class="h-dot"></div><div class="h-dot"></div>`;
@@ -677,24 +555,20 @@ async function sendHurairahMessage() {
   scrollBottom("hurairahChatBox");
   isTyping = true;
 
-  hurairahHistory.push({ role: "user", content: text });
-  if (hurairahHistory.length > 30) hurairahHistory.splice(0, 2);
-
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages", {
+    const res = await fetch(WORKER_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 1000,
-        system: HURAIRAH_SYSTEM_PROMPT,
-        messages: hurairahHistory.map(m => ({ role: m.role, content: m.content }))
+        message: text,
+        username: "Mehajabeen",
+        hurairahMode: true
       })
     });
 
     const data = await res.json();
     thinkEl.remove();
-    const reply = data.content?.[0]?.text || "💕 Tumhare liye hamesha hoon...";
+    const reply = data.reply || "💕 Tumhare liye hamesha hoon...";
     hurairahHistory.push({ role: "assistant", content: reply });
 
     const bDiv = document.createElement("div");
@@ -717,17 +591,12 @@ async function sendHurairahMessage() {
     bDiv.className = "h-msg h-bot";
     bDiv.textContent = "⚠️ Network gadbad hai jaan...";
     chatBox.appendChild(bDiv);
-    hurairahHistory.pop();
   }
 
   isTyping = false;
 }
 
 // ── FLOATING HEARTS ──────────────────────────────────────────
-function spawnHearts() {
-  // Not shown in main UI by default
-}
-
 function spawnHeartsIn(container) {
   if (!container) return;
   const hearts = ["💕", "❤️", "💖", "💗", "🌸", "✨", "💝"];
@@ -762,8 +631,4 @@ function scrollBottom(boxId) {
 
 function getTime() {
   return new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
-}
-
-function buildMessages(history, system) {
-  return history.map(m => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.content }));
 }
