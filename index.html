@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Hurairah AI</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#7c3aed">
@@ -14,28 +14,16 @@
 <meta name="apple-mobile-web-app-title" content="Hurairah AI">
 
 <script>
-  // ✅ Service worker unregister + clean refresh force load
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.getRegistrations().then(regs => {
       regs.forEach(reg => reg.unregister());
     });
   }
-
-  // ⚡ Permanent Cache Fix: Unique timestamp token generation
   const cacheBusterVersion = new Date().getTime();
-
-  // 1. Link style.css with anti-cache node
   const cssLink = document.createElement('link');
   cssLink.rel = 'stylesheet';
   cssLink.href = 'style.css?v=' + cacheBusterVersion;
   document.head.appendChild(cssLink);
-
-  // 2. Link script.js with anti-cache node
-  window.addEventListener('DOMContentLoaded', () => {
-    const jsScript = document.createElement('script');
-    jsScript.src = 'script.js?v=' + cacheBusterVersion;
-    document.body.appendChild(jsScript);
-  });
 </script>
 </head>
 <body>
@@ -64,40 +52,27 @@
 <div id="nameModal" class="name-modal-overlay">
   <div class="name-modal-box">
     <div class="name-modal-glow"></div>
-    <div class="name-modal-logo">
-      <img src="logo.png" alt="Logo">
-    </div>
+    <div class="name-modal-logo"><img src="logo.png" alt="Logo"></div>
     <h2>Hurairah AI</h2>
     <p>Apna naam likho shuru karne ke liye</p>
     <div class="name-input-wrap">
       <input type="text" id="nameInput" placeholder="Tumhara naam..." maxlength="30" autocomplete="off" />
     </div>
-    <button id="nameSubmitBtn">
-      <span>Shuru Karo</span>
-      <span>→</span>
-    </button>
+    <button id="nameSubmitBtn"><span>Shuru Karo</span><span>→</span></button>
   </div>
 </div>
 
 <div class="app">
   <div class="topbar">
     <button id="clearBtn">🗑️</button>
-    <div class="brand">
-      <span class="brand-icon">✨</span>
-      <span>Hurairah AI</span>
-    </div>
-    <div class="topbar-right">
-      <a href="trialroom.html" style="text-decoration:none;font-size:24px;">👕</a>
-    </div>
+    <div class="brand"><span class="brand-icon">✨</span><span>Hurairah AI</span></div>
+    <div class="topbar-right"><a href="trialroom.html" style="text-decoration:none;font-size:24px;">👕</a></div>
   </div>
 
   <div id="chatBox" class="chat-box">
     <div class="welcome-screen">
       <div class="online-badge">🟢 Online</div>
-      <div class="logo-wrap">
-        <img src="logo.png" alt="Hurairah AI">
-        <div class="logo-ring"></div>
-      </div>
+      <div class="logo-wrap"><img src="logo.png" alt="Hurairah AI"><div class="logo-ring"></div></div>
       <h1>Hello! 👋</h1>
       <h2>I'm Hurairah AI</h2>
       <p>How can I help you today?</p>
@@ -120,33 +95,354 @@
   <div class="input-area">
     <button class="icon-btn" id="attachBtn" type="button">📎</button>
     <input type="file" id="imageInput" accept="image/*" hidden>
-    
     <textarea id="messageInput" placeholder="Message likho..." rows="1"></textarea>
-    
     <button id="sendBtn" type="button">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
         <path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>
       </svg>
     </button>
-    
     <button class="icon-btn" id="micBtn" type="button">🎙️</button>
     <button class="icon-btn" id="headphoneBtn" type="button">🎧</button>
   </div>
 </div>
 
-<div id="recordingPopup" class="recording-popup">
-  <span>🎤</span> Listening...
-</div>
+<div id="recordingPopup" class="recording-popup"><span>🎤</span> Listening...</div>
 
 <script>
-  function chipClick(val) {
-    const textInput = document.getElementById("messageInput");
-    if(textInput) {
-      textInput.value = val;
-      const dispatchBtn = document.getElementById("sendBtn");
-      if (dispatchBtn) dispatchBtn.click();
-    }
+const API_URL = "https://hurairah-ai.annu8857818.workers.dev";
+const ELEVENLABS_API_KEY = "sk_ba5c973ec598f00b7293cc1f37675eb24f52363489ea82be";
+const ELEVENLABS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
+
+let username = localStorage.getItem("hurairah_username");
+let selectedImage = null;
+let currentAudioInstance = null;
+let fxInterval = null;
+const maxElements = 15;
+
+const chatBox = document.getElementById("chatBox");
+const input = document.getElementById("messageInput");
+const sendBtn = document.getElementById("sendBtn");
+const micBtn = document.getElementById("micBtn");
+const attachBtn = document.getElementById("attachBtn");
+const imageInput = document.getElementById("imageInput");
+const previewContainer = document.getElementById("imagePreview");
+const previewImgSrc = document.getElementById("previewImgSrc");
+const previewImgName = document.getElementById("previewImgName");
+const cancelImgPreviewBtn = document.getElementById("cancelImgPreviewBtn");
+
+if (username) {
+  if(document.getElementById("nameModal")) document.getElementById("nameModal").style.display = "none";
+} else {
+  if(document.getElementById("nameModal")) document.getElementById("nameModal").style.display = "flex";
+}
+
+const nameSubmitBtn = document.getElementById("nameSubmitBtn");
+if (nameSubmitBtn) {
+  nameSubmitBtn.addEventListener("click", () => {
+    const val = document.getElementById("nameInput").value.trim();
+    if (!val) return;
+    username = val;
+    localStorage.setItem("hurairah_username", username);
+    document.getElementById("nameModal").style.display = "none";
+  });
+}
+
+let messages = JSON.parse(localStorage.getItem("hurairah_chat") || "[]");
+let hurairahMode = sessionStorage.getItem("hurairah_mode") === "true";
+
+function triggerRomanticUI() {
+  document.body.classList.add("romantic-mode-on");
+  const container = document.querySelector(".app");
+  if (container) container.style.background = "transparent";
+  const header = document.querySelector(".brand");
+  if (header) header.innerHTML = "✨ Meri jaan 💕";
+  
+  if (!document.getElementById("vfxLayer")) {
+    const layer = document.createElement("div");
+    layer.id = "vfxLayer"; layer.className = "vfx-layer";
+    document.body.appendChild(layer);
   }
+  if (!fxInterval) { fxInterval = setInterval(addSparkles, 400); }
+}
+
+function addSparkles() {
+  const layer = document.getElementById("vfxLayer");
+  if (!layer || layer.children.length >= maxElements) return;
+  const item = document.createElement("div");
+  item.className = "sparkle-fx";
+  const pool = ["💖", "✨", "💕", "🌸", "❤️"];
+  item.innerHTML = pool[Math.floor(Math.random() * pool.length)];
+  item.style.left = Math.random() * 95 + "vw";
+  item.style.animationDuration = (Math.random() * 2 + 4) + "s";
+  item.style.fontSize = (Math.random() * 10 + 16) + "px";
+  layer.appendChild(item);
+  setTimeout(() => item.remove(), 5000);
+}
+
+if (hurairahMode) { setTimeout(triggerRomanticUI, 500); }
+
+function stopAllAudio(speakBtn, stopBtn) {
+  if (currentAudioInstance) { currentAudioInstance.pause(); currentAudioInstance.currentTime = 0; }
+  if (window.speechSynthesis) { window.speechSynthesis.cancel(); }
+  if (speakBtn) speakBtn.textContent = "🔊 Suno";
+  if (stopBtn) stopBtn.style.display = "none";
+}
+
+async function speakWithElevenLabs(text, btn, stopBtn) {
+  stopAllAudio(null, null);
+  try {
+    if (btn) btn.textContent = "⏳ Loading...";
+    if (stopBtn) stopBtn.style.display = "inline-block";
+    const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
+      method: "POST",
+      headers: { "xi-api-key": ELEVENLABS_API_KEY, "Content-Type": "application/json" },
+      body: JSON.stringify({ text: text, model_id: "eleven_turbo_v2_5", voice_settings: { stability: 0.4, similarity_boost: 0.9 } })
+    });
+    if (!res.ok) throw new Error();
+    const blob = await res.blob();
+    const audioUrl = URL.createObjectURL(blob);
+    currentAudioInstance = new Audio(audioUrl);
+    if (btn) btn.textContent = "🎙️ Bol raha..";
+    currentAudioInstance.play();
+    currentAudioInstance.onended = () => {
+      if (btn) btn.textContent = "🔊 Suno";
+      if (stopBtn) stopBtn.style.display = "none";
+    };
+  } catch (err) {
+    if (btn) btn.textContent = "🎙️ Bol raha..";
+    const speech = new SpeechSynthesisUtterance(text); speech.lang = "en-IN";
+    window.speechSynthesis.speak(speech);
+    speech.onend = () => { if (btn) btn.textContent = "🔊 Suno"; if (stopBtn) stopBtn.style.display = "none"; };
+  }
+}
+
+function addMessage(text, type, imgData = null) {
+  const msg = document.createElement("div");
+  const isRomanticText = hurairahMode || text.includes("Meri jaan") || text.includes("babu") || text.includes("smile");
+  const romanticClass = isRomanticText ? "romantic-reply" : "";
+  msg.className = `message ${type}`;
+  let imageHTML = imgData ? `<img src="${imgData}" onclick="window.open('${imgData}','_blank')" />` : "";
+
+  if (type === "bot") {
+    msg.innerHTML = `
+      <div class="bot-header"><div class="bot-avatar">✨</div><div class="bot-name">Hurairah AI</div></div>
+      <div class="msg-text ${romanticClass}">${text}</div>
+      <div class="audio-controls-row" style="display:flex; gap:6px; margin-top:6px;">
+        <button class="speak-btn">🔊 Suno</button>
+        <button class="stop-audio-btn" style="display:none;">🛑 Roko</button>
+      </div>
+      <div class="time">${getTime()}</div>
+    `;
+    const sBtn = msg.querySelector(".speak-btn");
+    const stBtn = msg.querySelector(".stop-audio-btn");
+    sBtn.addEventListener("click", () => speakWithElevenLabs(text, sBtn, stBtn));
+    stBtn.addEventListener("click", () => stopAllAudio(sBtn, stBtn));
+  } else {
+    msg.innerHTML = `${imageHTML} ${text ? `<div class="msg-text">${text}</div>` : ""} <div class="time">${getTime()}</div>`;
+  }
+  chatBox.appendChild(msg);
+  chatBox.scrollTop = chatBox.scrollHeight;
+  
+  if(text || imgData){
+    messages.push({ text, type, imgData });
+    localStorage.setItem("hurairah_chat", JSON.stringify(messages));
+  }
+}
+
+function showThinking() {
+  const thinking = document.createElement("div");
+  thinking.className = "thinking"; thinking.id = "thinking";
+  thinking.innerHTML = `<div class="dot"></div><div class="dot"></div><div class="dot"></div><span>Likh raha hai...</span>`;
+  chatBox.appendChild(thinking); chatBox.scrollTop = chatBox.scrollHeight;
+}
+function removeThinking() { const t = document.getElementById("thinking"); if (t) t.remove(); }
+
+if(attachBtn && imageInput) {
+  attachBtn.addEventListener("click", () => imageInput.click());
+  imageInput.addEventListener("change", () => {
+    const file = imageInput.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      selectedImage = reader.result;
+      if (previewContainer) {
+        previewImgSrc.src = selectedImage;
+        previewImgName.innerText = file.name.length > 20 ? file.name.substring(0,20) + "..." : file.name;
+        previewContainer.style.display = "flex";
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+if(cancelImgPreviewBtn) {
+  cancelImgPreviewBtn.addEventListener("click", () => {
+    selectedImage = null;
+    if(previewContainer) previewContainer.style.display = "none";
+  });
+}
+
+// 🎙️ Normal Mic Button Setup
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (SpeechRecognition && micBtn) {
+  const recognition = new SpeechRecognition();
+  recognition.lang = "en-IN";
+  recognition.interimResults = true; 
+
+  micBtn.addEventListener("click", () => {
+    try { recognition.start(); micBtn.style.opacity = "0.4"; } catch(e){}
+  });
+
+  recognition.onresult = (event) => {
+    let transcript = "";
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      transcript += event.results[i][0].transcript;
+    }
+    input.value = transcript;
+  };
+
+  recognition.onend = () => {
+    micBtn.style.opacity = "1";
+    if (input.value.trim() !== "") { sendMessage(); }
+  };
+}
+
+// 🎧 FIX: Headphone Voice Room Engine Core Binding
+if (SpeechRecognition) {
+  const headphoneBtn = document.getElementById("headphoneBtn");
+  const overlay = document.getElementById("voiceOverlay");
+  const statusText = document.getElementById("voiceStatusText");
+  const closeBtn = document.getElementById("closeVoiceBtn");
+  const waveBars = document.querySelectorAll(".w-bar");
+
+  const voiceRecog = new SpeechRecognition();
+  voiceRecog.lang = "en-IN";
+  let isVoiceModeActive = false;
+
+  if (headphoneBtn) {
+    headphoneBtn.addEventListener("click", () => {
+      isVoiceModeActive = true;
+      if (overlay) overlay.style.display = "flex";
+      startListeningCycle();
+    });
+  }
+
+  if (closeBtn) {
+    closeBtn.addEventListener("click", () => {
+      isVoiceModeActive = false;
+      if (overlay) overlay.style.display = "none";
+      try { voiceRecog.stop(); } catch(e){}
+      window.speechSynthesis.cancel();
+      if (currentAudioInstance) currentAudioInstance.pause();
+    });
+  }
+
+  function startListeningCycle() {
+    if (!isVoiceModeActive) return;
+    statusText.innerText = "Listening...";
+    waveBars.forEach(bar => bar.classList.add("v-streaming"));
+    try { voiceRecog.start(); } catch(e){}
+  }
+
+  voiceRecog.onresult = async (event) => {
+    const spokenText = event.results[0][0].transcript;
+    if (!spokenText.trim()) return;
+
+    statusText.innerText = "Thinking...";
+    waveBars.forEach(bar => bar.classList.remove("v-streaming"));
+    addMessage(spokenText, "user");
+
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, message: spokenText, hurairahMode })
+      });
+      const data = await res.json();
+      const replyText = data.reply || "Samajh nahi paya.";
+      
+      addMessage(replyText, "bot");
+      statusText.innerText = "Speaking...";
+
+      // ElevenLabs engine integration for Headphone Mode
+      try {
+        const audioRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
+          method: "POST",
+          headers: { "xi-api-key": ELEVENLABS_API_KEY, "Content-Type": "application/json" },
+          body: JSON.stringify({ text: replyText, model_id: "eleven_turbo_v2_5", voice_settings: { stability: 0.4, similarity_boost: 0.9 } })
+        });
+        const blob = await audioRes.blob();
+        currentAudioInstance = new Audio(URL.createObjectURL(blob));
+        currentAudioInstance.play();
+        currentAudioInstance.onended = () => { if (isVoiceModeActive) startListeningCycle(); };
+      } catch (e) {
+        const utterance = new SpeechSynthesisUtterance(replyText);
+        utterance.lang = "en-IN";
+        window.speechSynthesis.speak(utterance);
+        utterance.onend = () => { if (isVoiceModeActive) startListeningCycle(); };
+      }
+    } catch (err) {
+      statusText.innerText = "Error...";
+      setTimeout(startListeningCycle, 2000);
+    }
+  };
+
+  voiceRecog.onerror = () => { if (isVoiceModeActive) setTimeout(startListeningCycle, 1000); };
+}
+
+async function sendMessage() {
+  const text = input.value.trim();
+  if (!text && !selectedImage) return;
+
+  if (text.toLowerCase() === "mehajabeen pgl hu") {
+    hurairahMode = true;
+    sessionStorage.setItem("hurairah_mode", "true");
+    triggerRomanticUI();
+  }
+
+  const welcome = document.querySelector(".welcome-screen");
+  if (welcome) welcome.remove();
+
+  addMessage(text, "user", selectedImage);
+  input.value = ""; 
+  if (previewContainer) previewContainer.style.display = "none"; 
+  showThinking();
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, message: text, image: selectedImage, hurairahMode })
+    });
+    const data = await res.json();
+    removeThinking();
+    addMessage(data.reply || "Kuch samajh nahi aaya.", "bot");
+    selectedImage = null;
+  } catch (err) {
+    removeThinking(); addMessage("Server connectivity error.", "bot");
+  }
+}
+
+if(sendBtn) sendBtn.addEventListener("click", sendMessage);
+if(input) input.addEventListener("keydown", (e) => { if(e.key === "Enter") { e.preventDefault(); sendMessage(); } });
+
+function chipClick(val) {
+  const msgInput = document.getElementById("messageInput");
+  if(msgInput) {
+    msgInput.value = val;
+    sendMessage();
+  }
+}
+
+if(document.getElementById("clearBtn")) {
+  document.getElementById("clearBtn").addEventListener("click", () => {
+    if (confirm("Chat history clear karni hai?")) {
+      localStorage.removeItem("hurairah_chat");
+      sessionStorage.removeItem("hurairah_mode");
+      location.reload();
+    }
+  });
+}
 </script>
 </body>
 </html>
