@@ -96,7 +96,7 @@
   <div class="input-area">
     <button class="icon-btn" id="attachBtn" type="button">📎</button>
     <input type="file" id="imageInput" accept="image/*" hidden>
-    <textarea id="messageInput" placeholder="Message likho..." rows="1"></textarea>
+    <input type="text" id="messageInput" placeholder="Message likho..." autocomplete="off" enterkeyhint="send" />
     <button id="sendBtn" type="button">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
         <path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>
@@ -157,7 +157,6 @@ function triggerRomanticUI() {
   if (container) container.style.background = "transparent";
   const header = document.querySelector(".brand");
   if (header) header.innerHTML = "✨ Meri jaan 💕";
-  
   if (!document.getElementById("vfxLayer")) {
     const layer = document.createElement("div");
     layer.id = "vfxLayer"; layer.className = "vfx-layer";
@@ -201,8 +200,7 @@ async function speakWithElevenLabs(text, btn, stopBtn) {
     });
     if (!res.ok) throw new Error();
     const blob = await res.blob();
-    const audioUrl = URL.createObjectURL(blob);
-    currentAudioInstance = new Audio(audioUrl);
+    currentAudioInstance = new Audio(URL.createObjectURL(blob));
     if (btn) btn.textContent = "🎙️ Bol raha..";
     currentAudioInstance.play();
     currentAudioInstance.onended = () => {
@@ -210,7 +208,6 @@ async function speakWithElevenLabs(text, btn, stopBtn) {
       if (stopBtn) stopBtn.style.display = "none";
     };
   } catch (err) {
-    // 🛠️ FALLBACK BACK-UP AUDIO TRACK IF ELEVENLABS BLOCKS PIPELINE
     if (btn) btn.textContent = "🎙️ Bol raha..";
     const speech = new SpeechSynthesisUtterance(text); speech.lang = "en-IN";
     window.speechSynthesis.speak(speech);
@@ -218,9 +215,11 @@ async function speakWithElevenLabs(text, btn, stopBtn) {
   }
 }
 
+function getTime() { return new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }); }
+
 function addMessage(text, type, imgData = null) {
   const msg = document.createElement("div");
-  const isRomanticText = hurairahMode || text.includes("Meri jaan") || text.includes("babu") || text.includes("smile");
+  const isRomanticText = hurairahMode || text.includes("Meri jaan") || text.includes("babu");
   const romanticClass = isRomanticText ? "romantic-reply" : "";
   msg.className = `message ${type}`;
   let imageHTML = imgData ? `<img src="${imgData}" class="chat-img" onclick="window.open('${imgData}','_blank')" />` : "";
@@ -244,7 +243,6 @@ function addMessage(text, type, imgData = null) {
   }
   chatBox.appendChild(msg);
   chatBox.scrollTop = chatBox.scrollHeight;
-  
   if(text || imgData){
     messages.push({ text, type, imgData });
     localStorage.setItem("hurairah_chat", JSON.stringify(messages));
@@ -284,17 +282,14 @@ if(cancelImgPreviewBtn) {
   });
 }
 
-// 🎙️ Normal Mic Button Setup
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (SpeechRecognition && micBtn) {
   const recognition = new SpeechRecognition();
   recognition.lang = "en-IN";
-  recognition.interimResults = true; 
-
+  recognition.interimResults = true;
   micBtn.addEventListener("click", () => {
     try { recognition.start(); micBtn.style.opacity = "0.4"; } catch(e){}
   });
-
   recognition.onresult = (event) => {
     let transcript = "";
     for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -302,14 +297,13 @@ if (SpeechRecognition && micBtn) {
     }
     input.value = transcript;
   };
-
   recognition.onend = () => {
     micBtn.style.opacity = "1";
     if (input.value.trim() !== "") { sendMessage(); }
   };
 }
 
-// 🎧 FULL RE-ENGINEERED: Headphone Voice Call Engine Loop Handler with Secure Failback Pipeline
+// 🎧 Voice Call Mode
 if (SpeechRecognition) {
   const headphoneBtn = document.getElementById("headphoneBtn");
   const overlay = document.getElementById("voiceOverlay");
@@ -326,7 +320,13 @@ if (SpeechRecognition) {
   let voiceGotResult = false;
 
   if (headphoneBtn) {
-    headphoneBtn.addEventListener("click", () => {
+    headphoneBtn.addEventListener("click", async () => {
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch(e) {
+        alert("Microphone permission do pehle! Browser settings mein jaake allow karo.");
+        return;
+      }
       isVoiceModeActive = true;
       if (overlay) overlay.style.display = "flex";
       startListeningCycle();
@@ -358,11 +358,9 @@ if (SpeechRecognition) {
     voiceIsListening = false;
     const spokenText = event.results[0][0].transcript;
     if (!spokenText.trim()) { startListeningCycle(); return; }
-
     statusText.innerText = "Thinking...";
     waveBars.forEach(bar => bar.classList.remove("v-streaming"));
     addMessage(spokenText, "user");
-
     try {
       const res = await fetch(API_URL, {
         method: "POST",
@@ -371,10 +369,8 @@ if (SpeechRecognition) {
       });
       const data = await res.json();
       const replyText = data.reply || "Samajh nahi paya.";
-      
       addMessage(replyText, "bot");
       statusText.innerText = "Speaking...";
-
       let playedViaElevenLabs = false;
       try {
         const audioRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
@@ -390,7 +386,6 @@ if (SpeechRecognition) {
           currentAudioInstance.onended = () => { if (isVoiceModeActive) startListeningCycle(); };
         }
       } catch (e) { playedViaElevenLabs = false; }
-
       if (!playedViaElevenLabs) {
         const utterance = new SpeechSynthesisUtterance(replyText);
         utterance.lang = "en-IN";
@@ -403,7 +398,6 @@ if (SpeechRecognition) {
     }
   };
 
-  // onend fires after every stop - only restart if no result came (silence/timeout)
   voiceRecog.onend = () => {
     voiceIsListening = false;
     if (isVoiceModeActive && !voiceGotResult) {
@@ -423,21 +417,17 @@ if (SpeechRecognition) {
 async function sendMessage() {
   const text = input.value.trim();
   if (!text && !selectedImage) return;
-
   if (text.toLowerCase() === "mehajabeen pgl hu") {
     hurairahMode = true;
     sessionStorage.setItem("hurairah_mode", "true");
     triggerRomanticUI();
   }
-
   const welcome = document.querySelector(".welcome-screen");
   if (welcome) welcome.remove();
-
   addMessage(text, "user", selectedImage);
-  input.value = ""; 
+  input.value = "";
   if (previewContainer) previewContainer.style.display = "none";
   showThinking();
-
   try {
     const res = await fetch(API_URL, {
       method: "POST",
@@ -453,22 +443,22 @@ async function sendMessage() {
   }
 }
 
-if(sendBtn) sendBtn.addEventListener("click", sendMessage);
+if(sendBtn) {
+  sendBtn.addEventListener("click", sendMessage);
+  sendBtn.addEventListener("touchend", (e) => { e.preventDefault(); sendMessage(); });
+}
 if(input) {
   input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
+    if (e.key === "Enter") { e.preventDefault(); sendMessage(); }
+  });
+  input.addEventListener("keyup", (e) => {
+    if (e.key === "Enter" || e.keyCode === 13) { e.preventDefault(); sendMessage(); }
   });
 }
 
 function chipClick(val) {
-  const msgInput = document.getElementById("messageInput");
-  if(msgInput) {
-    msgInput.value = val;
-    sendMessage();
-  }
+  input.value = val;
+  sendMessage();
 }
 
 if(document.getElementById("clearBtn")) {
