@@ -28,6 +28,7 @@
 </head>
 <body>
 
+<!-- 🎧 Fullscreen Premium Voice Room Call Overlay Portal -->
 <div id="voiceOverlay" class="voice-overlay" style="display: none; position: fixed; inset: 0; background: radial-gradient(circle at center, #130a2a 0%, #05020d 100%); z-index: 99999; flex-direction: column; align-items: center; justify-content: space-between; padding: 50px 20px; font-family: sans-serif; color: white;">
   <div style="text-align: center; margin-top: 30px;">
     <h2 style="font-size: 22px; color: #a78bfa; letter-spacing: 0.5px;">Hurairah Voice Room</h2>
@@ -209,6 +210,7 @@ async function speakWithElevenLabs(text, btn, stopBtn) {
       if (stopBtn) stopBtn.style.display = "none";
     };
   } catch (err) {
+    // 🛠️ FALLBACK BACK-UP AUDIO TRACK IF ELEVENLABS BLOCKS PIPELINE
     if (btn) btn.textContent = "🎙️ Bol raha..";
     const speech = new SpeechSynthesisUtterance(text); speech.lang = "en-IN";
     window.speechSynthesis.speak(speech);
@@ -307,7 +309,7 @@ if (SpeechRecognition && micBtn) {
   };
 }
 
-// 🎧 FIX: Headphone Voice Room Engine Core Binding
+// 🎧 FULL RE-ENGINEERED: Headphone Voice Call Engine Loop Handler with Secure Failback Pipeline
 if (SpeechRecognition) {
   const headphoneBtn = document.getElementById("headphoneBtn");
   const overlay = document.getElementById("voiceOverlay");
@@ -332,8 +334,8 @@ if (SpeechRecognition) {
       isVoiceModeActive = false;
       if (overlay) overlay.style.display = "none";
       try { voiceRecog.stop(); } catch(e){}
-      window.speechSynthesis.cancel();
-      if (currentAudioInstance) currentAudioInstance.pause();
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      if (currentAudioInstance) { currentAudioInstance.pause(); currentAudioInstance.currentTime = 0; }
     });
   }
 
@@ -364,18 +366,24 @@ if (SpeechRecognition) {
       addMessage(replyText, "bot");
       statusText.innerText = "Speaking...";
 
-      // ElevenLabs engine integration for Headphone Mode
+      // Secure Failback Handler Node Node Execution
+      let playedViaElevenLabs = false;
       try {
         const audioRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
           method: "POST",
           headers: { "xi-api-key": ELEVENLABS_API_KEY, "Content-Type": "application/json" },
           body: JSON.stringify({ text: replyText, model_id: "eleven_turbo_v2_5", voice_settings: { stability: 0.4, similarity_boost: 0.9 } })
         });
-        const blob = await audioRes.blob();
-        currentAudioInstance = new Audio(URL.createObjectURL(blob));
-        currentAudioInstance.play();
-        currentAudioInstance.onended = () => { if (isVoiceModeActive) startListeningCycle(); };
-      } catch (e) {
+        if (audioRes.ok) {
+          const blob = await audioRes.blob();
+          currentAudioInstance = new Audio(URL.createObjectURL(blob));
+          currentAudioInstance.play();
+          playedViaElevenLabs = true;
+          currentAudioInstance.onended = () => { if (isVoiceModeActive) startListeningCycle(); };
+        }
+      } catch (e) { playedViaElevenLabs = false; }
+
+      if (!playedViaElevenLabs) {
         const utterance = new SpeechSynthesisUtterance(replyText);
         utterance.lang = "en-IN";
         window.speechSynthesis.speak(utterance);
@@ -405,7 +413,7 @@ async function sendMessage() {
 
   addMessage(text, "user", selectedImage);
   input.value = ""; 
-  if (previewContainer) previewContainer.style.display = "none"; 
+  if (previewContainer) previewContainer.style.display = "none";
   showThinking();
 
   try {
