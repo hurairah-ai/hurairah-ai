@@ -237,16 +237,17 @@ body.romantic-mode-on::before {
 }
 
 /* 🖼️ CHAT BUBBLE IMAGE FIXED (Gemini/Claude Scale) */
-.message img {
-  max-width: 140px !important;
-  max-height: 140px !important;
-  width: 140px !important;
-  height: 140px !important;
-  object-fit: cover !important;
+.message img, .message .chat-img {
+  max-width: 200px !important;
+  max-height: 200px !important;
+  width: auto !important;
+  height: auto !important;
+  object-fit: contain !important;
   border-radius: 12px !important;
   margin-bottom: 6px !important;
   display: block !important;
   box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  cursor: pointer;
 }
 
 /* 📥 INPUT ROW ARCHITECTURE FIXED (Wide Message Text Area Box) */
