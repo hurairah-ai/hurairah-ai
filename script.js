@@ -107,11 +107,9 @@ const imageInput = document.getElementById("imageInput");
 
 function getTime() { return new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }); }
 
-// FIX: Scroll to bottom — works even when keyboard is open on mobile
 function scrollToBottom() {
   setTimeout(() => {
     chatBox.scrollTop = chatBox.scrollHeight;
-    // Also try scrollIntoView on last message for mobile keyboard
     const lastMsg = chatBox.lastElementChild;
     if (lastMsg && lastMsg.scrollIntoView) {
       lastMsg.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -122,7 +120,6 @@ function scrollToBottom() {
 function addMessage(text, type, imgData = null) {
   const msg = document.createElement("div");
   msg.className = `message ${type}`;
-  // FIX: Image in chat — max 160px, same as CSS
   let imageHTML = imgData ? `<img src="${imgData}" style="max-width:160px; max-height:160px; border-radius:12px; display:block; margin-bottom:6px; cursor:pointer;" onclick="window.open('${imgData}','_blank')" />` : "";
 
   if (type === "bot") {
@@ -145,7 +142,7 @@ function addMessage(text, type, imgData = null) {
     msg.innerHTML = `${imageHTML} ${text ? `<div class="msg-text">${text}</div>` : ""} <div class="time">${getTime()}</div>`;
   }
   chatBox.appendChild(msg);
-  scrollToBottom(); // FIX: use improved scroll
+  scrollToBottom();
   
   if(text || imgData){
     messages.push({ text, type, imgData });
@@ -180,7 +177,6 @@ async function speakWithElevenLabs(text, btn, stopBtn) {
       if (stopBtn) stopBtn.style.display = "none";
     };
   } catch (err) {
-    // Fallback to Web Speech API
     if (btn) btn.textContent = "🎙️ Bol raha..";
     const speech = new SpeechSynthesisUtterance(text);
     speech.lang = "en-IN";
@@ -201,7 +197,6 @@ function showThinking() {
 }
 function removeThinking() { const t = document.getElementById("thinking"); if (t) t.remove(); }
 
-// 🖼️ IMAGE ATTACH
 if(attachBtn && imageInput) {
   attachBtn.addEventListener("click", () => imageInput.click());
   imageInput.addEventListener("change", () => {
@@ -214,7 +209,6 @@ if(attachBtn && imageInput) {
       if (existingPreview) existingPreview.remove();
       const preview = document.createElement("div");
       preview.id = "imagePreview";
-      // FIX: smaller preview thumbnail
       preview.style.cssText = `position: relative; display: inline-block; margin: 6px 10px; border-radius: 10px;`;
       preview.innerHTML = `
         <img src="${selectedImage}" style="max-width:70px; max-height:70px; border-radius:10px; object-fit:cover;" />
@@ -226,7 +220,6 @@ if(attachBtn && imageInput) {
   });
 }
 
-// 🎤 MIC BUTTON
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 if (SpeechRecognition && micBtn) {
   const recognition = new SpeechRecognition();
@@ -243,7 +236,7 @@ if (SpeechRecognition && micBtn) {
   };
 }
 
-// 🎧 VOICE CALL MODE
+// 🎧 VOICE CALL MODE (FIXED VOICE-TO-VOICE LOOP)
 const headphoneBtn = document.getElementById("headphoneBtn");
 const voiceOverlay = document.getElementById("voiceOverlay");
 const voiceStatusText = document.getElementById("voiceStatusText");
@@ -255,9 +248,10 @@ if (SpeechRecognition && headphoneBtn) {
   voiceRecog.lang = "en-IN";
   voiceRecog.continuous = false;
   voiceRecog.interimResults = false;
+  
   let isVoiceModeActive = false;
   let voiceIsListening = false;
-  let voiceGotResult = false;
+  let aiIsSpeaking = false; // New lock parameter to prevent overlap
 
   headphoneBtn.addEventListener("click", async () => {
     try {
@@ -267,6 +261,7 @@ if (SpeechRecognition && headphoneBtn) {
       return;
     }
     isVoiceModeActive = true;
+    aiIsSpeaking = false;
     if (voiceOverlay) voiceOverlay.style.display = "flex";
     startListeningCycle();
   });
@@ -275,16 +270,15 @@ if (SpeechRecognition && headphoneBtn) {
     closeVoiceBtn.addEventListener("click", () => {
       isVoiceModeActive = false;
       voiceIsListening = false;
+      aiIsSpeaking = false;
       if (voiceOverlay) voiceOverlay.style.display = "none";
       try { voiceRecog.stop(); } catch(e){}
-      if (window.speechSynthesis) window.speechSynthesis.cancel();
-      if (currentAudioInstance) { currentAudioInstance.pause(); currentAudioInstance.currentTime = 0; }
+      stopAllAudio(null, null);
     });
   }
 
   function startListeningCycle() {
-    if (!isVoiceModeActive || voiceIsListening) return;
-    voiceGotResult = false;
+    if (!isVoiceModeActive || voiceIsListening || aiIsSpeaking) return;
     voiceIsListening = true;
     if (voiceStatusText) voiceStatusText.innerText = "Listening...";
     waveBars.forEach(bar => bar.classList.add("v-streaming"));
@@ -292,13 +286,15 @@ if (SpeechRecognition && headphoneBtn) {
   }
 
   voiceRecog.onresult = async (event) => {
-    voiceGotResult = true;
     voiceIsListening = false;
     const spokenText = event.results[0][0].transcript;
     if (!spokenText.trim()) { startListeningCycle(); return; }
+    
+    aiIsSpeaking = true; // Lock it down
     if (voiceStatusText) voiceStatusText.innerText = "Thinking...";
     waveBars.forEach(bar => bar.classList.remove("v-streaming"));
     addMessage(spokenText, "user");
+
     try {
       const res = await fetch(API_URL, {
         method: "POST",
@@ -310,7 +306,6 @@ if (SpeechRecognition && headphoneBtn) {
       addMessage(replyText, "bot");
       if (voiceStatusText) voiceStatusText.innerText = "Speaking...";
 
-      // Try ElevenLabs first, fallback to Web Speech
       let spokenViaElevenLabs = false;
       try {
         const audioRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
@@ -323,7 +318,10 @@ if (SpeechRecognition && headphoneBtn) {
           currentAudioInstance = new Audio(URL.createObjectURL(blob));
           currentAudioInstance.play();
           spokenViaElevenLabs = true;
-          currentAudioInstance.onended = () => { if (isVoiceModeActive) startListeningCycle(); };
+          currentAudioInstance.onended = () => { 
+            aiIsSpeaking = false;
+            if (isVoiceModeActive) startListeningCycle(); 
+          };
         }
       } catch (e) { spokenViaElevenLabs = false; }
 
@@ -331,24 +329,27 @@ if (SpeechRecognition && headphoneBtn) {
         const utterance = new SpeechSynthesisUtterance(replyText);
         utterance.lang = "en-IN";
         window.speechSynthesis.speak(utterance);
-        utterance.onend = () => { if (isVoiceModeActive) startListeningCycle(); };
+        utterance.onend = () => { 
+          aiIsSpeaking = false;
+          if (isVoiceModeActive) startListeningCycle(); 
+        };
       }
     } catch (err) {
       if (voiceStatusText) voiceStatusText.innerText = "Error...";
+      aiIsSpeaking = false;
       setTimeout(startListeningCycle, 2000);
     }
   };
 
   voiceRecog.onend = () => {
     voiceIsListening = false;
-    if (isVoiceModeActive && !voiceGotResult) {
-      setTimeout(startListeningCycle, 500);
+    if (isVoiceModeActive && !aiIsSpeaking) {
+      setTimeout(startListeningCycle, 400);
     }
   };
 
   voiceRecog.onerror = (e) => {
     voiceIsListening = false;
-    voiceGotResult = false;
     if (isVoiceModeActive && e.error !== "aborted") {
       setTimeout(startListeningCycle, 1000);
     }
@@ -371,7 +372,7 @@ async function sendMessage() {
 
   addMessage(text, "user", selectedImage);
   input.value = ""; 
-  input.blur(); // FIX: close keyboard after send on mobile, then re-focus
+  input.blur(); 
   if(document.getElementById("imagePreview")) document.getElementById("imagePreview").remove();
   showThinking();
 
@@ -392,23 +393,17 @@ async function sendMessage() {
   }
 }
 
-// FIX: Send button — click + touchend both
+// FIX: Anti-duplicate fix for click/touch overlap
 if(sendBtn) {
-  sendBtn.addEventListener("click", sendMessage);
-  sendBtn.addEventListener("touchend", (e) => { e.preventDefault(); sendMessage(); });
+  sendBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    sendMessage();
+  });
 }
 
-// FIX: Enter key — keydown + touchend for mobile keyboards
 if(input) {
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  });
-  // Extra: some Android keyboards fire keyup not keydown
-  input.addEventListener("keyup", (e) => {
-    if (e.key === "Enter" || e.keyCode === 13) {
       e.preventDefault();
       sendMessage();
     }
