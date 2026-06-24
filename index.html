@@ -1,140 +1,101 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Hurairah AI</title><link rel="stylesheet" href="style.css">
-<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#0f172a"><link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"></head><body><div class="app"><!-- SIDEBAR -->
-<aside class="sidebar">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hurairah AI</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="dark-theme">
 
-    <div class="logo">
-        ✨ Hurairah AI
+    <div id="normal-app" class="app-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fa-solid to-wand-magic-sparkles"></i> Hurairah AI</h2>
+                <button id="close-sidebar-btn" class="mobile-only-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <button id="new-chat-btn" class="btn btn-primary"><i class="fa-solid fa-plus"></i> New Chat</button>
+            <div class="history-section">
+                <h3>Chat History</h3>
+                <div id="history-list" class="history-list"></div>
+            </div>
+            <div class="sidebar-footer">
+                <span id="user-display"><i class="fa-solid fa-user"></i> Loading...</span>
+            </div>
+        </aside>
+
+        <main class="chat-area">
+            <header class="main-header">
+                <button id="toggle-sidebar-btn" class="mobile-only-btn"><i class="fa-solid fa-bars"></i></button>
+                <div class="header-info">
+                    <h1>Hurairah AI</h1>
+                    <p class="tagline">Smart • Fast • Reliable</p>
+                </div>
+                <div class="status-badge"><span class="dot"></span> Online</div>
+            </header>
+
+            <div id="chat-messages" class="chat-messages">
+                <div class="welcome-card" id="welcome-card">
+                    <i class="fa-solid fa-robot welcome-icon"></i>
+                    <h2>Kaise ho? Main Hurairah AI hoon.</h2>
+                    <p>Main aapki coding, study, weather ya kisi bhi general sawaal me madad kar sakta hoon. Kuch bhi puchiye, Hinglish me!</p>
+                </div>
+            </div>
+
+            <div id="image-preview-container" class="hidden">
+                <img id="image-preview" src="" alt="Preview">
+                <button id="remove-image-btn"><i class="fa-solid fa-circle-xmark"></i></button>
+            </div>
+
+            <footer class="input-area">
+                <div class="input-wrapper">
+                    <label for="image-upload" class="icon-btn"><i class="fa-solid fa-image"></i></label>
+                    <input type="file" id="image-upload" accept="image/*" style="display:none;">
+                    
+                    <textarea id="user-input" rows="1" placeholder="Kuch puchiye... (Hinglish me)"></textarea>
+                    
+                    <button id="mic-btn" class="icon-btn"><i class="fa-solid fa-microphone"></i></button>
+                    <button id="send-btn" class="icon-btn send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+            </footer>
+        </main>
     </div>
 
-    <button id="newChatBtn" class="new-chat">
-        + New Chat
-    </button>
+    <div id="romantic-app" class="romantic-overlay hidden">
+        <header class="romantic-header">
+            <div class="romantic-title">🌹 Hurairah ❤️ Mehajabeen</div>
+            <div class="romantic-subtitle">Forever Together ✨</div>
+        </header>
 
-    <div class="chat-history" id="chatHistory"></div>
-
-</aside>
-
-<!-- MAIN -->
-<main class="main">
-
-    <!-- TOPBAR -->
-    <header class="topbar">
-
-        <div>
-            <h2>Hurairah AI</h2>
-            <small>Smart • Fast • Reliable</small>
+        <div id="romantic-messages" class="romantic-messages">
+            <div class="romantic-welcome">
+                <h2>Assalamualaikum Meri Jaan ❤️</h2>
+                <h3>Welcome Back Mehajabeen 🥺❤️</h3>
+                <p>Main tumhara Hurairah hoon...</p>
+                <p class="highlight">Aaj meri pyari si jaan kaisi hai? 🌹❤️</p>
+            </div>
         </div>
 
-        <div class="top-actions">
-
-            <span class="status">
-                🟢 Online
-            </span>
-
-            <label class="mode-switch">
-
-                <input type="checkbox" id="hurairahMode">
-
-                <span class="slider"></span>
-
-                ❤️ Hurairah Mode
-
-            </label>
-
+        <div id="romantic-typing" class="romantic-typing hidden">
+            <span>❤️ Hurairah tumhare liye likh raha hai...</span>
         </div>
 
-    </header>
-
-    <!-- CHAT AREA -->
-    <section class="chat-box" id="chatBox">
-
-        <div class="welcome-card">
-
-            <h1>👋 Assalamualaikum</h1>
-
-            <p>
-                Main Hurairah AI hoon.
-                Hinglish, Hindi aur English mein
-                aapki help kar sakta hoon.
-            </p>
-
-        </div>
-
-    </section>
-
-    <!-- TYPING -->
-    <div class="typing" id="typingIndicator">
-
-        <span></span>
-        <span></span>
-        <span></span>
-
-        Hurairah AI is thinking...
-
+        <footer class="romantic-input-area">
+            <div class="romantic-input-wrapper">
+                <textarea id="romantic-input" rows="1" placeholder="💌 Meri jaan... dil ki baat likho ❤️"></textarea>
+                <button id="romantic-send-btn" class="r-send-btn"><i class="fa-solid fa-heart"></i></button>
+            </div>
+        </footer>
     </div>
 
-    <!-- IMAGE PREVIEW -->
-    <div id="imagePreviewContainer" class="image-preview-container">
-
-        <img id="imagePreview">
-
-        <button id="removeImage">
-            ✖
-        </button>
-
+    <div id="username-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Aapka Naam?</h3>
+            <input type="text" id="username-input" placeholder="Apna naam likhiye...">
+            <button id="save-username-btn" class="btn btn-primary">Save</button>
+        </div>
     </div>
 
-    <!-- INPUT -->
-    <footer class="input-area">
-
-        <div class="input-wrapper">
-
-            <input
-                type="file"
-                id="imageInput"
-                accept="image/*"
-                hidden
-            >
-
-            <button
-                class="icon-btn upload"
-                id="uploadBtn"
-                title="Upload Image"
-            >
-                📷
-            </button>
-
-            <textarea
-                id="userInput"
-                placeholder="Message Hurairah AI..."
-                rows="1"
-            ></textarea>
-
-            <button
-                class="icon-btn mic"
-                id="micBtn"
-                title="Voice Input"
-            >
-                🎤
-            </button>
-
-            <button
-                class="icon-btn send"
-                id="sendBtn"
-                title="Send"
-            >
-                ➤
-            </button>
-
-        </div>
-
-    </footer>
-
-</main>
-
-</div><script src="script.js"></script></body>
+</body>
 </html>
