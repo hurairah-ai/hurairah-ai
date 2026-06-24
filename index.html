@@ -223,7 +223,7 @@ function addMessage(text, type, imgData = null) {
   const isRomanticText = hurairahMode || text.includes("Meri jaan") || text.includes("babu") || text.includes("smile");
   const romanticClass = isRomanticText ? "romantic-reply" : "";
   msg.className = `message ${type}`;
-  let imageHTML = imgData ? `<img src="${imgData}" onclick="window.open('${imgData}','_blank')" />` : "";
+  let imageHTML = imgData ? `<img src="${imgData}" class="chat-img" onclick="window.open('${imgData}','_blank')" />` : "";
 
   if (type === "bot") {
     msg.innerHTML = `
@@ -319,7 +319,11 @@ if (SpeechRecognition) {
 
   const voiceRecog = new SpeechRecognition();
   voiceRecog.lang = "en-IN";
+  voiceRecog.continuous = false;
+  voiceRecog.interimResults = false;
   let isVoiceModeActive = false;
+  let voiceIsListening = false;
+  let voiceGotResult = false;
 
   if (headphoneBtn) {
     headphoneBtn.addEventListener("click", () => {
@@ -332,6 +336,7 @@ if (SpeechRecognition) {
   if (closeBtn) {
     closeBtn.addEventListener("click", () => {
       isVoiceModeActive = false;
+      voiceIsListening = false;
       if (overlay) overlay.style.display = "none";
       try { voiceRecog.stop(); } catch(e){}
       if (window.speechSynthesis) window.speechSynthesis.cancel();
@@ -340,15 +345,19 @@ if (SpeechRecognition) {
   }
 
   function startListeningCycle() {
-    if (!isVoiceModeActive) return;
+    if (!isVoiceModeActive || voiceIsListening) return;
+    voiceGotResult = false;
+    voiceIsListening = true;
     statusText.innerText = "Listening...";
     waveBars.forEach(bar => bar.classList.add("v-streaming"));
-    try { voiceRecog.start(); } catch(e){}
+    try { voiceRecog.start(); } catch(e){ voiceIsListening = false; }
   }
 
   voiceRecog.onresult = async (event) => {
+    voiceGotResult = true;
+    voiceIsListening = false;
     const spokenText = event.results[0][0].transcript;
-    if (!spokenText.trim()) return;
+    if (!spokenText.trim()) { startListeningCycle(); return; }
 
     statusText.innerText = "Thinking...";
     waveBars.forEach(bar => bar.classList.remove("v-streaming"));
@@ -366,7 +375,6 @@ if (SpeechRecognition) {
       addMessage(replyText, "bot");
       statusText.innerText = "Speaking...";
 
-      // Secure Failback Handler Node Node Execution
       let playedViaElevenLabs = false;
       try {
         const audioRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`, {
@@ -395,7 +403,21 @@ if (SpeechRecognition) {
     }
   };
 
-  voiceRecog.onerror = () => { if (isVoiceModeActive) setTimeout(startListeningCycle, 1000); };
+  // onend fires after every stop - only restart if no result came (silence/timeout)
+  voiceRecog.onend = () => {
+    voiceIsListening = false;
+    if (isVoiceModeActive && !voiceGotResult) {
+      setTimeout(startListeningCycle, 500);
+    }
+  };
+
+  voiceRecog.onerror = (e) => {
+    voiceIsListening = false;
+    voiceGotResult = false;
+    if (isVoiceModeActive && e.error !== "aborted") {
+      setTimeout(startListeningCycle, 1000);
+    }
+  };
 }
 
 async function sendMessage() {
@@ -432,7 +454,14 @@ async function sendMessage() {
 }
 
 if(sendBtn) sendBtn.addEventListener("click", sendMessage);
-if(input) input.addEventListener("keydown", (e) => { if(e.key === "Enter") { e.preventDefault(); sendMessage(); } });
+if(input) {
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+}
 
 function chipClick(val) {
   const msgInput = document.getElementById("messageInput");
