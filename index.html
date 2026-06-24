@@ -2,9 +2,6 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Hurairah AI</title>
 <link rel="manifest" href="manifest.json">
@@ -12,6 +9,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Hurairah AI">
+<link rel="stylesheet" href="style.css">
 
 <script>
   if ('serviceWorker' in navigator) {
@@ -19,19 +17,6 @@
       regs.forEach(reg => reg.unregister());
     });
   }
-
-  const cacheBusterVersion = new Date().getTime();
-
-  const cssLink = document.createElement('link');
-  cssLink.rel = 'stylesheet';
-  cssLink.href = 'style.css?v=' + cacheBusterVersion;
-  document.head.appendChild(cssLink);
-
-  window.addEventListener('DOMContentLoaded', () => {
-    const jsScript = document.createElement('script');
-    jsScript.src = 'script.js?v=' + cacheBusterVersion;
-    document.body.appendChild(jsScript);
-  });
 </script>
 </head>
 <body>
@@ -101,5 +86,6 @@
   <span>🎤</span> Listening...
 </div>
 
+<script src="script.js"></script>
 </body>
 </html>
