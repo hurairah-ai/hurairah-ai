@@ -1,101 +1,105 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hurairah AI</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hurairah AI</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#7c3aed">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Hurairah AI">
+
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(regs => {
+      regs.forEach(reg => reg.unregister());
+    });
+  }
+
+  const cacheBusterVersion = new Date().getTime();
+
+  const cssLink = document.createElement('link');
+  cssLink.rel = 'stylesheet';
+  cssLink.href = 'style.css?v=' + cacheBusterVersion;
+  document.head.appendChild(cssLink);
+
+  window.addEventListener('DOMContentLoaded', () => {
+    const jsScript = document.createElement('script');
+    jsScript.src = 'script.js?v=' + cacheBusterVersion;
+    document.body.appendChild(jsScript);
+  });
+</script>
 </head>
-<body class="dark-theme">
+<body>
 
-    <div id="normal-app" class="app-container">
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <h2><i class="fa-solid to-wand-magic-sparkles"></i> Hurairah AI</h2>
-                <button id="close-sidebar-btn" class="mobile-only-btn"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            <button id="new-chat-btn" class="btn btn-primary"><i class="fa-solid fa-plus"></i> New Chat</button>
-            <div class="history-section">
-                <h3>Chat History</h3>
-                <div id="history-list" class="history-list"></div>
-            </div>
-            <div class="sidebar-footer">
-                <span id="user-display"><i class="fa-solid fa-user"></i> Loading...</span>
-            </div>
-        </aside>
-
-        <main class="chat-area">
-            <header class="main-header">
-                <button id="toggle-sidebar-btn" class="mobile-only-btn"><i class="fa-solid fa-bars"></i></button>
-                <div class="header-info">
-                    <h1>Hurairah AI</h1>
-                    <p class="tagline">Smart • Fast • Reliable</p>
-                </div>
-                <div class="status-badge"><span class="dot"></span> Online</div>
-            </header>
-
-            <div id="chat-messages" class="chat-messages">
-                <div class="welcome-card" id="welcome-card">
-                    <i class="fa-solid fa-robot welcome-icon"></i>
-                    <h2>Kaise ho? Main Hurairah AI hoon.</h2>
-                    <p>Main aapki coding, study, weather ya kisi bhi general sawaal me madad kar sakta hoon. Kuch bhi puchiye, Hinglish me!</p>
-                </div>
-            </div>
-
-            <div id="image-preview-container" class="hidden">
-                <img id="image-preview" src="" alt="Preview">
-                <button id="remove-image-btn"><i class="fa-solid fa-circle-xmark"></i></button>
-            </div>
-
-            <footer class="input-area">
-                <div class="input-wrapper">
-                    <label for="image-upload" class="icon-btn"><i class="fa-solid fa-image"></i></label>
-                    <input type="file" id="image-upload" accept="image/*" style="display:none;">
-                    
-                    <textarea id="user-input" rows="1" placeholder="Kuch puchiye... (Hinglish me)"></textarea>
-                    
-                    <button id="mic-btn" class="icon-btn"><i class="fa-solid fa-microphone"></i></button>
-                    <button id="send-btn" class="icon-btn send-btn"><i class="fa-solid fa-paper-plane"></i></button>
-                </div>
-            </footer>
-        </main>
+<div id="nameModal" class="name-modal-overlay">
+  <div class="name-modal-box">
+    <div class="name-modal-glow"></div>
+    <div class="name-modal-logo">
+      <img src="logo.png" alt="Logo">
     </div>
-
-    <div id="romantic-app" class="romantic-overlay hidden">
-        <header class="romantic-header">
-            <div class="romantic-title">🌹 Hurairah ❤️ Mehajabeen</div>
-            <div class="romantic-subtitle">Forever Together ✨</div>
-        </header>
-
-        <div id="romantic-messages" class="romantic-messages">
-            <div class="romantic-welcome">
-                <h2>Assalamualaikum Meri Jaan ❤️</h2>
-                <h3>Welcome Back Mehajabeen 🥺❤️</h3>
-                <p>Main tumhara Hurairah hoon...</p>
-                <p class="highlight">Aaj meri pyari si jaan kaisi hai? 🌹❤️</p>
-            </div>
-        </div>
-
-        <div id="romantic-typing" class="romantic-typing hidden">
-            <span>❤️ Hurairah tumhare liye likh raha hai...</span>
-        </div>
-
-        <footer class="romantic-input-area">
-            <div class="romantic-input-wrapper">
-                <textarea id="romantic-input" rows="1" placeholder="💌 Meri jaan... dil ki baat likho ❤️"></textarea>
-                <button id="romantic-send-btn" class="r-send-btn"><i class="fa-solid fa-heart"></i></button>
-            </div>
-        </footer>
+    <h2>Hurairah AI</h2>
+    <p>Apna naam likho shuru karne ke liye</p>
+    <div class="name-input-wrap">
+      <input type="text" id="nameInput" placeholder="Tumhara naam..." maxlength="30" autocomplete="off" />
     </div>
+    <button id="nameSubmitBtn">
+      <span>Shuru Karo</span>
+      <span>→</span>
+    </button>
+  </div>
+</div>
 
-    <div id="username-modal" class="modal hidden">
-        <div class="modal-content">
-            <h3>Aapka Naam?</h3>
-            <input type="text" id="username-input" placeholder="Apna naam likhiye...">
-            <button id="save-username-btn" class="btn btn-primary">Save</button>
-        </div>
+<div class="app">
+  <div class="topbar">
+    <button id="clearBtn">🗑️</button>
+    <div class="brand">
+      <span class="brand-icon">✨</span>
+      <span>Hurairah AI</span>
     </div>
+    <div class="topbar-right">
+      <a href="trialroom.html" style="text-decoration:none;font-size:24px;">👕</a>
+    </div>
+  </div>
+
+  <div id="chatBox" class="chat-box">
+    <div class="welcome-screen">
+      <div class="online-badge">🟢 Online</div>
+      <div class="logo-wrap">
+        <img src="logo.png" alt="Hurairah AI">
+        <div class="logo-ring"></div>
+      </div>
+      <h1>Hello! 👋</h1>
+      <h2>I'm Hurairah AI</h2>
+      <p>How can I help you today?</p>
+      <div class="welcome-chips">
+        <span onclick="chipClick('Tumse kuch poochna tha')">💬 Baat karo</span>
+        <span onclick="chipClick('Meri madad karo')">🤝 Madad lo</span>
+        <span onclick="chipClick('Kuch interesting batao')">✨ Explore</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <button class="icon-btn" id="attachBtn">📎</button>
+    <input type="file" id="imageInput" accept="image/*" hidden>
+    <textarea id="messageInput" placeholder="Message likho..." rows="1"></textarea>
+    <button id="sendBtn">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+        <path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>
+      </svg>
+    </button>
+    <button class="icon-btn" id="micBtn">🎙️</button>
+  </div>
+</div>
+
+<div id="recordingPopup" class="recording-popup">
+  <span>🎤</span> Listening...
+</div>
 
 </body>
 </html>
