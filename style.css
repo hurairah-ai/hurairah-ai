@@ -8,6 +8,7 @@
 
 body {
   height: 100vh;
+  height: -webkit-fill-available; /* Mobile view height fix */
   background: linear-gradient(160deg, #020617 0%, #0d0a2e 50%, #0b1735 100%);
   color: white;
   overflow: hidden;
@@ -68,10 +69,14 @@ body.romantic-mode-on::before {
   100% { transform: translateY(110vh) rotate(360deg) scale(1.2); opacity: 0; }
 }
 
+/* App Container - Handled with relative layouts to prevent jumping */
 .app {
   height: 100vh;
+  height: -webkit-fill-available;
   display: flex;
   flex-direction: column;
+  position: relative;
+  overflow: hidden;
 }
 
 .topbar {
@@ -115,14 +120,15 @@ body.romantic-mode-on::before {
 #clearBtn:active { background: rgba(255,255,255,0.15); }
 .topbar-right { width: 40px; }
 
+/* Fixed Chat Box Padding for Smooth Mobile Scrolling */
 .chat-box {
   flex: 1;
   overflow-y: auto;
-  /* FIX: padding-bottom increased so messages not hidden behind input bar */
-  padding: 20px 16px 160px;
+  padding: 20px 16px 85px; /* Safely ends right above absolute bar */
   display: flex;
   flex-direction: column;
   scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
 }
 
 .chat-box::-webkit-scrollbar { width: 3px; }
@@ -232,7 +238,6 @@ body.romantic-mode-on::before {
   border-bottom-left-radius: 6px;
 }
 
-/* FIX: Image preview size — max 160px, contained */
 .message img, .message .chat-img {
   max-width: 160px !important;
   max-height: 160px !important;
@@ -246,9 +251,9 @@ body.romantic-mode-on::before {
   cursor: pointer;
 }
 
-/* FIX: Input area — nowrap so mic/headphone never get hidden */
+/* FIX: Input Area shifts layout properly with Keyboard Viewports */
 .input-area {
-  position: fixed;
+  position: absolute;
   left: 12px;
   right: 12px;
   bottom: 14px;
@@ -283,7 +288,6 @@ textarea, #messageInput {
 
 textarea::placeholder, #messageInput::placeholder { color: #64748b; }
 
-/* FIX: icon buttons smaller on mobile to fit all 4 */
 .icon-btn {
   width: 36px;
   height: 36px;
@@ -320,7 +324,7 @@ textarea::placeholder, #messageInput::placeholder { color: #64748b; }
 #sendBtn:active { transform: scale(0.92); }
 
 #imagePreview {
-  position: fixed;
+  position: absolute;
   bottom: 74px;
   left: 16px;
   right: 16px;
@@ -647,8 +651,8 @@ code:not(pre code) {
   .welcome-screen h2 { font-size: 20px; }
   .logo-wrap { width: 140px; height: 140px; }
   .message { max-width: 88%; font-size: 14px; }
-  /* FIX: Even smaller buttons on very small screens */
-  .icon-btn { width: 32px; height: 32px; font-size: 15px; }
-  #sendBtn { width: 32px; height: 32px; }
-  .input-area { gap: 4px; padding: 5px 6px; }
+  .icon-btn { width: 34px; height: 34px; font-size: 15px; }
+  #sendBtn { width: 34px; height: 34px; }
+  .input-area { gap: 4px; padding: 5px 6px; bottom: 8px; left: 8px; right: 8px; }
+  .chat-box { padding: 15px 12px 75px; }
 }
