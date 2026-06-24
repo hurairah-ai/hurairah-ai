@@ -14,7 +14,6 @@ body {
   transition: background 1.5s ease-in-out;
 }
 
-/* 👑 ROMANTIC MODE (HURAIRAH MODE ACTIVE AURA) */
 body.romantic-mode-on {
   background: radial-gradient(circle at center, #2e0542 0%, #070314 100%) !important;
 }
@@ -75,7 +74,6 @@ body.romantic-mode-on::before {
   flex-direction: column;
 }
 
-/* TOPBAR */
 .topbar {
   position: relative;
   display: flex;
@@ -117,7 +115,6 @@ body.romantic-mode-on::before {
 #clearBtn:active { background: rgba(255,255,255,0.15); }
 .topbar-right { width: 40px; }
 
-/* CHAT BOX */
 .chat-box {
   flex: 1;
   overflow-y: auto;
@@ -131,7 +128,6 @@ body.romantic-mode-on::before {
 .chat-box::-webkit-scrollbar-track { background: transparent; }
 .chat-box::-webkit-scrollbar-thumb { background: rgba(124,58,237,0.4); border-radius: 10px; }
 
-/* WELCOME */
 .welcome-screen {
   margin: auto;
   display: flex;
@@ -210,7 +206,6 @@ body.romantic-mode-on::before {
   transform: scale(0.95);
 }
 
-/* MESSAGES */
 .message {
   max-width: 80%;
   padding: 14px 18px;
@@ -236,7 +231,6 @@ body.romantic-mode-on::before {
   border-bottom-left-radius: 6px;
 }
 
-/* 🖼️ CHAT BUBBLE IMAGE FIXED (Gemini/Claude Scale) */
 .message img, .message .chat-img {
   max-width: 200px !important;
   max-height: 200px !important;
@@ -250,7 +244,6 @@ body.romantic-mode-on::before {
   cursor: pointer;
 }
 
-/* 📥 INPUT ROW ARCHITECTURE FIXED (Wide Message Text Area Box) */
 .input-area {
   position: fixed;
   left: 12px;
@@ -268,8 +261,8 @@ body.romantic-mode-on::before {
   z-index: 999;
 }
 
-textarea {
-  flex: 1 !important; /* Forces textbox to push wide to fill empty spaces layout */
+textarea, #messageInput {
+  flex: 1 !important;
   background: transparent;
   border: none;
   outline: none;
@@ -279,12 +272,10 @@ textarea {
   padding: 8px 4px;
   height: 38px;
   min-height: 38px;
-  max-height: 120px;
   line-height: 1.4;
-  overflow-y: auto;
 }
 
-textarea::placeholder { color: #64748b; }
+textarea::placeholder, #messageInput::placeholder { color: #64748b; }
 
 .icon-btn {
   width: 40px;
@@ -321,10 +312,9 @@ textarea::placeholder { color: #64748b; }
 
 #sendBtn:active { transform: scale(0.92); }
 
-/* 🖼️ FIXED CHATGPT/GEMINI STYLE CHOTI IMAGE PREVIEW THUMBNAIL BOX */
 #imagePreview {
   position: fixed;
-  bottom: 74px; /* Perfectly sits right above the input box bar height */
+  bottom: 74px;
   left: 16px;
   right: 16px;
   background: rgba(13, 8, 41, 0.96);
@@ -381,7 +371,6 @@ textarea::placeholder { color: #64748b; }
   white-space: nowrap;
 }
 
-/* THINKING */
 .thinking {
   display: flex;
   gap: 6px;
@@ -410,7 +399,6 @@ textarea::placeholder { color: #64748b; }
   50% { transform: translateY(-6px); opacity: 1; }
 }
 
-/* RECORDING */
 .recording-popup {
   position: fixed;
   left: 50%;
@@ -435,7 +423,6 @@ textarea::placeholder { color: #64748b; }
   50% { box-shadow: 0 0 35px rgba(124,58,237,0.8); }
 }
 
-/* NAME MODAL */
 .name-modal-overlay {
   position: fixed;
   inset: 0;
@@ -547,7 +534,6 @@ textarea::placeholder { color: #64748b; }
 
 #nameSubmitBtn:active { transform: scale(0.97); }
 
-/* CODE BLOCK AND UTILITIES */
 pre {
   background: #1e1e2e;
   border: 1px solid rgba(124,58,237,0.3);
