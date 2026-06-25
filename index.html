@@ -19,19 +19,14 @@
     });
   }
 
-  // ✅ FIX 4 & 5: Tab close / mobile off ke baad fresh chat
-  // sessionStorage clear hoti hai jab tab band ho — isliye chat history reset hogi
-  // Lekin username (localStorage) rehta hai taaki naam dobara na poochhe
-  window.addEventListener('beforeunload', () => {
+  // ✅ Har baar fresh chat — tab close/reopen ya naya browse pe
+  (function () {
+    const sessionActive = sessionStorage.getItem('hurairah_session_active');
+    if (!sessionActive) {
+      localStorage.removeItem('hurairah_chat'); // purani chat clear (username rehta hai)
+    }
     sessionStorage.setItem('hurairah_session_active', 'yes');
-  });
-
-  const sessionActive = sessionStorage.getItem('hurairah_session_active');
-  if (!sessionActive) {
-    // Naya session — chat history clear karo
-    localStorage.removeItem('hurairah_chat');
-  }
-  sessionStorage.setItem('hurairah_session_active', 'yes');
+  })();
 </script>
 </head>
 <body>
@@ -101,7 +96,6 @@
   <span>🎤</span> Listening...
 </div>
 
-<!-- Mehajabeen Romantic Mode Canvas (for particle animation) -->
 <canvas id="romanticCanvas" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9998;"></canvas>
 
 <script src="script.js"></script>
