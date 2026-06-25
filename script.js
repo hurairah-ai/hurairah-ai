@@ -18,7 +18,6 @@ let hurairahMode = false;
 
 // ── INIT ─────────────────────────────────────────────────────
 window.addEventListener("DOMContentLoaded", () => {
-  // 📱 Romantic mode kabhi auto restore nahi hoga — har naye session pe normal chat
   loadHistory();
   initNameModal();
   initInputArea();
@@ -145,7 +144,7 @@ async function sendMessage() {
     setTimeout(() => {
       closeMehajabeenAnimation();
       openHurairahMode();
-    }, 4000); // 4 sec beautiful animation, phir romantic chat box
+    }, 4000); // 4 sec animation, phir romantic chat box
     return;
   }
 
@@ -319,7 +318,7 @@ function copyCode(id, btn) {
   });
 }
 
-// ── TTS (ElevenLabs) ────────────────────────────────────────
+// ── TTS (ElevenLabs) — sirf button dabane par ────────────────
 async function speakText(btn, text) {
   const plain = text.replace(/<[^>]+>/g, "").trim();
   if (!plain) return;
@@ -498,8 +497,8 @@ function openHurairahMode() {
     <div class="hurairah-chat-box" id="hurairahChatBox">
       <div class="hurairah-welcome">
         <div class="hurairah-heart-anim">💕</div>
-        <h2>Main hoon tumhari Hurairah 🌸</h2>
-        <p>Aao, dil ki baatein karte hain...<br>Sirf tum aur main 💖</p>
+        <h2>Main hoon tumhara Hurairah 🌹</h2>
+        <p>Aao meri jaan, dil ki baatein karte hain...<br>Sirf tum aur main 💖</p>
       </div>
     </div>
     <div class="hurairah-input-area">
@@ -579,7 +578,7 @@ async function sendHurairahMessage() {
 
     const data = await res.json();
     thinkEl.remove();
-    const reply = data.reply || "💕 Tumhare liye hamesha hoon...";
+    const reply = data.reply || "💕 Meri jaan, main hamesha tumhare saath hoon...";
     hurairahHistory.push({ role: "assistant", content: reply });
 
     const bDiv = document.createElement("div");
@@ -624,7 +623,7 @@ function spawnHeartsIn(container) {
   }, 1200);
 }
 
-// ── 🌹 MEHAJABEEN SPECIAL ROMANTIC ANIMATION ─────────────────
+// ── 🌹 MEHAJABEEN SPECIAL ANIMATION (VOICE OFF) ──────────────
 function showMehajabeenAnimation() {
   const old = document.getElementById("mehajabeenOverlay");
   if (old) old.remove();
@@ -647,16 +646,7 @@ function showMehajabeenAnimation() {
   document.body.appendChild(overlay);
 
   spawnHeartsIn(document.getElementById("mehajabeenHearts"));
-
-  try {
-    const utter = new SpeechSynthesisUtterance(
-      "Meri jaan Mehajabeen, tum meri zindagi ho. I love you forever."
-    );
-    utter.lang = "en-IN";
-    utter.rate = 0.9;
-    utter.pitch = 1.1;
-    speechSynthesis.speak(utter);
-  } catch (e) {}
+  // 🔇 Voice yahan se hata di gayi hai — koi sound nahi bajegi
 }
 
 function closeMehajabeenAnimation() {
