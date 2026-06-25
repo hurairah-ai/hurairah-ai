@@ -1,5 +1,5 @@
 // ============================================================
-// HURAIRAH AI — script.js (FIXED VERSION)
+// HURAIRAH AI — script.js (COMPLETE)
 // ============================================================
 
 // ── CONFIG ──────────────────────────────────────────────────
@@ -18,6 +18,7 @@ let hurairahMode = false;
 
 // ── INIT ─────────────────────────────────────────────────────
 window.addEventListener("DOMContentLoaded", () => {
+  // 📱 Romantic mode kabhi auto restore nahi hoga — har naye session pe normal chat
   loadHistory();
   initNameModal();
   initInputArea();
@@ -138,6 +139,16 @@ async function sendMessage() {
 
   const lower = text.toLowerCase();
 
+  // 💞 SPECIAL: "mehajabeen pgl hu" — sirf is command se romantic mode
+  if (lower.includes("mehajabeen pgl hu") || lower.includes("mehajabeen pgl")) {
+    showMehajabeenAnimation();
+    setTimeout(() => {
+      closeMehajabeenAnimation();
+      openHurairahMode();
+    }, 4000); // 4 sec beautiful animation, phir romantic chat box
+    return;
+  }
+
   // Image generation — handle locally
   if (
     lower.includes("image banao") || lower.includes("image bana") ||
@@ -149,7 +160,7 @@ async function sendMessage() {
     return;
   }
 
-  // Hurairah Mode trigger
+  // Hurairah Mode trigger (other phrases)
   if (
     lower.includes("hurairah mode") ||
     lower.includes("romantic mode") ||
@@ -362,7 +373,7 @@ function initMic() {
   }
 
   recognition = new SpeechRecognition();
-  recognition.lang = "hi-IN";
+  recognition.lang = "en-IN"; // ✅ Hinglish Roman script
   recognition.interimResults = false;
   recognition.maxAlternatives = 1;
 
@@ -613,6 +624,49 @@ function spawnHeartsIn(container) {
   }, 1200);
 }
 
+// ── 🌹 MEHAJABEEN SPECIAL ROMANTIC ANIMATION ─────────────────
+function showMehajabeenAnimation() {
+  const old = document.getElementById("mehajabeenOverlay");
+  if (old) old.remove();
+
+  const overlay = document.createElement("div");
+  overlay.id = "mehajabeenOverlay";
+  overlay.className = "mehajabeen-overlay";
+  overlay.innerHTML = `
+    <div class="mehajabeen-hearts" id="mehajabeenHearts"></div>
+    <div class="mehajabeen-content">
+      <div class="mehajabeen-big-heart">💖</div>
+      <h1 class="mehajabeen-title">Meri Jaan Mehajabeen</h1>
+      <p class="mehajabeen-text">
+        Tum meri zindagi ho 🌹<br>
+        Tumhari smile meri duniya hai 😘<br>
+        I Love You Forever 💕
+      </p>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  spawnHeartsIn(document.getElementById("mehajabeenHearts"));
+
+  try {
+    const utter = new SpeechSynthesisUtterance(
+      "Meri jaan Mehajabeen, tum meri zindagi ho. I love you forever."
+    );
+    utter.lang = "en-IN";
+    utter.rate = 0.9;
+    utter.pitch = 1.1;
+    speechSynthesis.speak(utter);
+  } catch (e) {}
+}
+
+function closeMehajabeenAnimation() {
+  const overlay = document.getElementById("mehajabeenOverlay");
+  if (overlay) {
+    overlay.style.opacity = "0";
+    setTimeout(() => overlay.remove(), 500);
+  }
+}
+
 // ── HELPERS ──────────────────────────────────────────────────
 function showThinking(boxId) {
   const chatBox = document.getElementById(boxId);
@@ -624,11 +678,13 @@ function showThinking(boxId) {
   return el;
 }
 
+// ── SCROLL TO BOTTOM ─────────────────────────────────────────
 function scrollBottom(boxId) {
   const box = document.getElementById(boxId);
   if (box) box.scrollTop = box.scrollHeight;
 }
 
+// ── GET CURRENT TIME ─────────────────────────────────────────
 function getTime() {
   return new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
 }
